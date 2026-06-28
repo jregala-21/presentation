@@ -1,0 +1,21 @@
+Canva navigation control is generally not available to arbitrary embeds.
+
+What this project can do:
+- Inject iframe and send postMessage events.
+- If Canva blocks/ignores postMessage navigation, there may be no reliable way to control slides directly.
+
+Practical alternatives:
+A) Use a provider with an official/embed API that supports next/prev (Google Slides, Microsoft PowerPoint via web viewer, Reveal.js, Deck.js, etc.).
+B) Export presentation to MP4/WebM (or PDF) and control with your own HTML5 <video> or PDF.js viewer.
+C) For Canva: if you can only use embeds, the only robust approach is typically to use user-driven UI inside Canva (not externally), or use a different host.
+
+Implementation suggestion for this repo:
+- Add new 'media type' handlers:
+  - 'video' slides: stageWebLink/video upload and wire NEXT/PREV to seek(time) or play next clip.
+  - 'pdf': use PDF.js; NEXT/PREV to increment page.
+
+If you want this repo updated, tell me which format you can provide:
+- MP4/WebM (preferred for 'controls')
+- PDF (works, slower)
+- Or switch to Google Slides/other API provider.
+
