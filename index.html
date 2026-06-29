@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Media Presenter Studio Pro</title>
+  <title>JIL TAGUIG PRESENTER</title>
   <style>
     :root {
       --bg-dark: #121216;
@@ -14,6 +14,12 @@
       --accent-blue: #007acc;
       --accent-green: #28a745;
       --accent-purple: #7d3cff;
+      --accent-red: #dc3545;
+      --transition-speed: 0.6s;
+    }
+
+    * {
+      box-sizing: border-box;
     }
 
     body {
@@ -35,6 +41,13 @@
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    header h2 {
+      margin: 0;
+      font-size: 1.2rem;
     }
 
     .main-layout {
@@ -42,6 +55,19 @@
       grid-template-columns: 360px 1fr;
       flex-grow: 1;
       height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+
+    @media (max-width: 900px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr 1fr;
+        height: auto;
+        overflow-y: auto;
+      }
+      body {
+        overflow-y: auto;
+      }
     }
 
     .control-panel {
@@ -52,61 +78,78 @@
       flex-direction: column;
       gap: 15px;
       overflow-y: auto;
+      height: 100%;
+    }
+
+    .preview-panel-container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+      overflow-y: auto;
+      height: 100%;
+      justify-content: flex-start;
     }
 
     .section-box {
       background: var(--bg-surface);
-      padding: 12px;
-      border-radius: 6px;
+      padding: 14px;
+      border-radius: 8px;
       border: 1px solid var(--border);
     }
 
     h3 {
       margin-top: 0;
       margin-bottom: 10px;
-      font-size: 14px;
+      font-size: 13px;
       color: #aaa;
       text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
-    input[type="text"], input[type="file"] {
+    input[type="text"], input[type="file"], select {
       width: 100%;
-      padding: 8px;
-      box-sizing: border-box;
+      padding: 10px;
       background: #121216;
       border: 1px solid var(--border);
       color: white;
-      border-radius: 4px;
+      border-radius: 6px;
       margin-bottom: 8px;
+      font-size: 14px;
     }
 
     button {
       background: var(--accent-blue);
       color: white;
       border: none;
-      padding: 10px 12px;
-      border-radius: 4px;
+      padding: 10px 14px;
+      border-radius: 6px;
       cursor: pointer;
       font-weight: bold;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      font-size: 14px;
     }
 
     button:hover { opacity: 0.92; }
 
     .action-btn {
-      width: 100%;
-      padding: 12px;
+      flex: 1;
+      padding: 14px;
       font-size: 16px;
-      margin-top: 15px;
       background-color: var(--accent-green);
     }
 
     .deck-list {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 10px;
       margin-top: 10px;
-      max-height: 180px;
+      max-height: 200px;
       overflow-y: auto;
+      padding-right: 4px;
     }
 
     .thumb-item {
@@ -116,6 +159,7 @@
       aspect-ratio: 16/9;
       position: relative;
       overflow: hidden;
+      border-radius: 4px;
     }
 
     .thumb-item img {
@@ -128,10 +172,12 @@
     .thumb-item.active { border-color: var(--accent-blue); }
 
     .viewport {
-      flex-grow: 1;
+      width: 100%;
+      max-width: 1000px;
+      margin: 0 auto;
       background: #000;
       border: 2px solid #444;
-      border-radius: 4px;
+      border-radius: 8px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -143,22 +189,25 @@
 
     .viewport img,
     .viewport video,
-    .viewport canvas {
+    .viewport canvas,
+    .viewport iframe {
       width: 100%;
       height: 100%;
       object-fit: contain;
+      border: none;
     }
 
     .viewport-label {
       position: absolute;
-      top: 10px;
-      left: 10px;
+      top: 12px;
+      left: 12px;
       background: rgba(0,0,0,0.8);
       padding: 4px 8px;
-      font-size: 12px;
+      font-size: 11px;
       border-radius: 4px;
       font-weight: bold;
       z-index: 10;
+      letter-spacing: 0.5px;
     }
 
     #audience-view {
@@ -170,16 +219,49 @@
       justify-content: center;
       align-items: center;
       position: relative;
+      opacity: 1;
+    }
+
+    #audience-view.fade-transition {
+      transition: opacity var(--transition-speed) ease-in-out;
+    }
+    #audience-view.fade-out-active {
+      opacity: 0 !important;
+    }
+    #audience-view.ftb-active {
+      opacity: 0 !important;
+      transition: opacity 0.4s ease-in-out !important;
+    }
+
+    #audience-bg-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 40;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity var(--transition-speed) ease-in-out;
+      background-color: #000;
+    }
+    #audience-bg-layer.active {
+      opacity: 1;
+    }
+    #audience-bg-layer img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
     }
 
     #audience-view canvas,
     #audience-view iframe,
     #audience-view img,
     #audience-view video {
+      position: absolute;
       width: 100%;
       height: 100%;
       border: none;
       object-fit: contain;
+      top: 0;
+      left: 0;
     }
 
     body.live-window-mode #operator-view { display: none; }
@@ -195,12 +277,14 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      max-height: 150px;
+      overflow-y: auto;
     }
 
     .scene-item {
       border: 1px solid rgba(255,255,255,0.10);
       background: rgba(0,0,0,0.20);
-      border-radius: 8px;
+      border-radius: 6px;
       padding: 10px;
       cursor: pointer;
       display: flex;
@@ -215,34 +299,61 @@
     }
 
     .scene-item .name {
-      font-weight: 900;
+      font-weight: 600;
       color: #eee;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 190px;
+      max-width: 170px;
     }
 
     .mini-btn {
       background: rgba(255,255,255,0.10);
       border: 1px solid rgba(255,255,255,0.15);
       color: #ddd;
-      padding: 6px 8px;
+      padding: 6px 10px;
       border-radius: 6px;
-      font-weight: 800;
+      font-weight: bold;
       cursor: pointer;
     }
 
-    .mini-btn:hover { opacity: 0.92; }
+    .sync-status-banner {
+      padding: 10px;
+      background: rgba(220, 53, 69, 0.2);
+      border: 1px solid var(--accent-red);
+      border-radius: 6px;
+      margin-bottom: 5px;
+      font-size: 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
 
-    .pdf-toolbar {
+    .sync-status-banner.connected {
+      background: rgba(40, 167, 69, 0.2);
+      border-color: var(--accent-green);
+    }
+
+    .file-meta-tag {
+      font-size: 10px;
+      color: #999;
+      word-break: break-all;
+      margin-top: 2px;
+      background: rgba(0,0,0,0.4);
+      padding: 3px;
+      border-radius: 4px;
+      max-height: 35px;
+      overflow-y: auto;
+    }
+
+    .pdf-toolbar, .video-toolbar {
       position: absolute;
-      left: 10px;
-      bottom: 10px;
-      background: rgba(0,0,0,0.7);
-      border: 1px solid rgba(255,255,255,0.12);
-      padding: 8px 10px;
-      border-radius: 8px;
+      left: 12px;
+      bottom: 12px;
+      background: rgba(0,0,0,0.85);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 8px 12px;
+      border-radius: 6px;
       z-index: 20;
       display: flex;
       align-items: center;
@@ -251,68 +362,131 @@
       font-size: 12px;
     }
 
-    .pdf-toolbar input[type="range"] {
-      width: 220px;
-    }
-
     .status-text {
       color: #aaa;
-      font-size: 12px;
+      font-size: 13px;
       line-height: 1.3;
     }
 
-    .muted-hint {
-      color: #888;
-      font-size: 12px;
-      line-height: 1.35;
+    .ftb-btn {
+      background-color: #333;
+      color: #fff;
+      border: 1px solid #555;
+    }
+    .ftb-btn.active {
+      background-color: var(--accent-red);
+      border-color: #ff5c6c;
     }
 
-    .small-input {
-      margin-bottom: 0 !important;
+    .ftg-btn {
+      background-color: #2a2a35;
+      color: #fff;
+      border: 1px solid var(--border);
+    }
+    .ftg-btn.active {
+      background-color: var(--accent-purple);
+      border-color: #9e66ff;
+    }
+
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+    }
+    .modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 90%;
+      max-width: 440px;
+      padding: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      transform: scale(0.95);
+      transition: transform 0.2s ease-out;
+    }
+    .modal-overlay.open .modal-box {
+      transform: scale(1);
+    }
+    .modal-title {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 0;
+      margin-bottom: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #fff;
+    }
+    .modal-body {
+      font-size: 14px;
+      color: #ccc;
+      margin-bottom: 20px;
+      line-height: 1.4;
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
     }
   </style>
 
-  <!-- PDF.js (CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-
   <script>
-    // Ensure PDF.js uses the correct worker; without this, some browsers fail to render.
-    // pdfjsLib is loaded from the CDN above.
-    (function () {
-      try {
-        if (typeof pdfjsLib !== 'undefined') {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-        }
-      } catch (e) {}
-    })();
+    try {
+      if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+      }
+    } catch (e) {}
   </script>
 </head>
 <body>
   <div id="operator-view">
     <header>
-      <h2>Media Presenter Studio Pro</h2>
-      <button onclick="openDisplayWindow()">Open Display Screen</button>
+      <h2>JIL TAGUIG PRESENTER</h2>
+      <div class="row" style="flex-wrap: nowrap;">
+        <select id="header-bg-selector" style="margin-bottom: 0; width: 180px; height: 38px;" onchange="changeBackgroundTarget(this.value)">
+          <option value="">-- Choose Background Image --</option>
+        </select>
+        <button id="ftg-toggle-btn" class="ftg-btn" style="height: 38px;" onclick="toggleFadeToBackground()">🖼️ Fade To Background</button>
+        
+        <button id="ftb-toggle-btn" class="ftb-btn" style="height: 38px;" onclick="toggleFadeToBlack()">⚫ Fade To Black</button>
+        <button style="height: 38px;" onclick="openDisplayWindow()">Open Display Screen</button>
+        <button style="height: 38px; background-color: var(--accent-red);" onclick="closeDisplayScreen()">Close Display Screen</button>
+      </div>
     </header>
 
     <div class="main-layout">
       <div class="control-panel">
         <div class="section-box">
-          <h3>Scenes</h3>
-
-          <div class="scene-list" id="scene-list"></div>
-
-          <div class="row" style="margin-top:10px;">
-            <input id="new-scene-name" type="text" placeholder="New scene name" style="margin-bottom:0; flex:1;" />
-            <button class="mini-btn" onclick="createSceneFromInput()">+ Add</button>
-          </div>
-
-          <div class="status-text" style="margin-top:10px;">
-            Tip: selecting a scene updates the media thumbnails below.
+          <h3>Local Folder Link</h3>
+          <div id="folder-sync-banner" class="sync-status-banner">
+            <span id="folder-status-txt">📁 No workspace folder connected yet.</span>
+            <button id="folder-action-btn" onclick="requestFolderPermission()" style="background: var(--accent-blue);">Setup Media Folder</button>
           </div>
         </div>
 
         <div class="section-box">
-          <h3>Media (Files into active scene)</h3>
+          <h3>Scenes</h3>
+          <div class="scene-list" id="scene-list"></div>
+          <div class="row" style="margin-top:10px;">
+            <input id="new-scene-name" type="text" placeholder="New scene name" style="margin-bottom:0; flex:1;" />
+            <button class="mini-btn" onclick="createSceneFromInput()">+ Add</button>
+          </div>
+        </div>
+
+        <div class="section-box">
+          <h3>Media Assets</h3>
           <input
             type="file"
             id="file-uploader"
@@ -320,79 +494,215 @@
             accept="image/*,video/*,application/pdf"
             onchange="handleUpload(event)"
           />
-
           <div class="deck-list" id="deck-container"></div>
-
-          <div class="muted-hint" style="margin-top:10px;">
-            Local file blobs can’t persist across refresh. Canva URLs are persisted.
-          </div>
         </div>
 
         <div class="section-box">
           <h3>Status</h3>
-          <div class="status-text" id="slide-status" style="margin-top:10px;">No media queued</div>
+          <div class="status-text" id="slide-status" style="margin-top:4px;">No media queued</div>
+          
+          <div id="canva-lens-deck" style="margin-top: 10px; display: none;">
+            <button id="lens-toggle-btn" onclick="initializePrecisionLens()" style="background-color: var(--accent-purple); width:100%; padding:10px;">
+              ⚡ Start Preview Target Sync
+            </button>
+          </div>
         </div>
 
         <div class="section-box">
           <h3>Canva Presentation URL</h3>
           <input type="text" id="web-url-input" placeholder="Paste Canva embed URL" />
-          <button style="width: 100%" onclick="stageWebLinkToActiveScene()">Queue Embed (Preview + sync if supported)</button>
-          <div class="muted-hint" style="margin-top:10px;">
-            Canva may block programmatic slide sync. This app will only sync if the embed communicates state.
-          </div>
+          <button style="width: 100%" onclick="stageWebLinkToActiveScene()">Queue Embed</button>
         </div>
       </div>
 
-      <div>
-        <div class="section-box" style="margin:15px;">
-          <h3 style="margin-bottom:6px;">Preview Panel</h3>
+      <div class="preview-panel-container">
+        <div class="section-box" style="width: 100%;">
+          <h3 style="margin-bottom:10px;">Live Canvas Preview</h3>
           <div class="viewport" id="preview-viewport">
             <span class="viewport-label">PREVIEW</span>
             <div id="preview-placeholder" style="color:#555;">No Media Queued</div>
           </div>
-          <button class="action-btn" onclick="fireLive()">Go Live (Enter)</button>
+          
+          <div class="row" style="margin-top: 15px;">
+            <select id="transition-type-select" style="margin-bottom: 0; width: 140px; height: 46px; font-size: 15px; font-weight: bold;">
+              <option value="fade" selected>✨ Fade</option>
+              <option value="cut">⚡ Cut</option>
+            </select>
+            <button class="action-btn" onclick="fireLive()" style="margin-top:0; height:46px;">Go Live (Enter)</button>
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <div id="audience-view"></div>
+  <div id="audience-view">
+    <div id="audience-bg-layer"></div>
+  </div>
+
+  <div id="studio-modal" class="modal-overlay">
+    <div class="modal-box">
+      <div id="modal-title" class="modal-title">Notification</div>
+      <div id="modal-body" class="modal-body"></div>
+      <div id="modal-input-container"></div>
+      <div class="modal-footer">
+        <button id="modal-cancel-btn" style="background: #444;" onclick="closeModal(false)">Cancel</button>
+        <button id="modal-confirm-btn" style="background: var(--accent-blue);" onclick="closeModal(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     const channel = new BroadcastChannel('switcher_broadcast_stream');
 
-    // ===== Persistence =====
     const LS_KEY = 'mps_scenes_v1';
     const LS_ACTIVE_SCENE = 'mps_active_scene_id_v1';
+    const LS_BG_TARGET = 'mps_bg_target_filename_v1';
+    const DB_NAME = 'MPS_Folder_DB';
+    const STORE_NAME = 'handles';
+    const KEY_HANDLE = 'root_dir_handle';
 
-    function safeJsonParse(s, fallback) {
-      try { return JSON.parse(s); } catch (e) { return fallback; }
+    let scenes = [];
+    let activeSceneId = null;
+    let folderHandle = null; 
+    let staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
+    let displayWindow = null;
+    let lensCaptureStream = null;
+    let lensLoopInterval = null;
+    let pdfDoc = null;
+    let lastIncoming = null;
+    let isFTBActive = false;
+    let isFTGActive = false; 
+    let modalResolve = null;
+
+    let discoveredWorkspaceImages = {};
+
+    function showModal(title, text, showInput = false, defaultInputValue = '') {
+      return new Promise((resolve) => {
+        modalResolve = resolve;
+        document.getElementById('modal-title').textContent = title;
+        document.getElementById('modal-body').textContent = text;
+        const inputContainer = document.getElementById('modal-input-container');
+        inputContainer.innerHTML = '';
+        
+        if (showInput) {
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.id = 'modal-text-field';
+          input.value = defaultInputValue;
+          input.style.width = '100%';
+          input.style.marginTop = '0px';
+          inputContainer.appendChild(input);
+          setTimeout(() => input.focus(), 50);
+        }
+        
+        document.getElementById('studio-modal').classList.add('open');
+      });
     }
 
-    function uid() {
-      return 's_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
+    function closeModal(isConfirmed) {
+      document.getElementById('studio-modal').classList.remove('open');
+      if (!modalResolve) return;
+      
+      if (isConfirmed) {
+        const inputField = document.getElementById('modal-text-field');
+        if (inputField) {
+          modalResolve({ confirmed: true, value: inputField.value });
+        } else {
+          modalResolve({ confirmed: true });
+        }
+      } else {
+        modalResolve({ confirmed: false });
+      }
+      modalResolve = null;
+    }
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(STORE_NAME);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+    async function saveFolderHandle(handle) {
+      const db = await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readwrite');
+        tx.objectStore(STORE_NAME).put(handle, KEY_HANDLE);
+        tx.oncomplete = () => resolve();
+      });
+    }
+    async function loadFolderHandle() {
+      const db = await openDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(STORE_NAME, 'readonly');
+        const req = tx.objectStore(STORE_NAME).get(KEY_HANDLE);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    function safeJsonParse(s, fallback) {
+      try { return JSON.parse(s); } catch (e) {}
+      return fallback;
+    }
+
+    const uid = () => 's_' + Math.random().toString(16).slice(2) + '_' + Date.now().toString(16);
+
+    // native Fullscreen Request Utility
+    function enterFullscreen() {
+      const element = document.documentElement;
+      if (element.requestFullscreen) {
+        element.requestFullscreen();
+      } else if (element.webkitRequestFullscreen) { /* Safari */
+        element.webkitRequestFullscreen();
+      } else if (element.msRequestFullscreen) { /* IE11 */
+        element.msRequestFullscreen();
+      }
+    }
+
+    // Constructs Fullscreen hints overlay interface inside Projector Mode
+    function setupDisplayWindowFeatures() {
+      document.body.addEventListener('dblclick', () => {
+        enterFullscreen();
+      });
+
+      const fsOverlay = document.createElement('div');
+      fsOverlay.id = 'fs-hint-overlay';
+      fsOverlay.style.cssText = `
+        position: fixed; inset: 0; background: rgba(0,0,0,0.9);
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        z-index: 999999; font-family: sans-serif; color: white; gap: 15px;
+      `;
+      fsOverlay.innerHTML = `
+        <h3 style="margin:0; color:#fff; font-size: 1.5rem;">Display Window Ready</h3>
+        <p style="margin:0; color:#aaa; font-size: 14px;">Move this window to your projection monitor screen.</p>
+        <button id="fs-engage-btn" style="background:#007acc; font-size:16px; padding:12px 24px; border-radius:8px;">
+          🖵 Maximize to Fullscreen
+        </button>
+        <small style="color:#666;">Or double click anytime / Press F11 to transition</small>
+      `;
+      document.body.appendChild(fsOverlay);
+
+      document.getElementById('fs-engage-btn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        enterFullscreen();
+        fsOverlay.remove();
+      });
     }
 
     function normalizeUrl(url) {
       url = (url || '').trim();
       if (!url) return '';
       if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
-
+      if (url.includes('/watch?')) url = url.replace('/watch?', '/design?');
+      if (url.includes('/watch/')) url = url.replace('/watch/', '/design/');
       if (url.includes('/design/') && !url.includes('?embed')) {
         const base = url.split('?')[0].replace(/\/edit.*$/, '');
         return base + '?embed';
       }
       return url;
     }
-
-    // ===== Scenes / Items =====
-    // item: { id, type:'image'|'video'|'pdf'|'url', value, name }
-    let scenes = [];
-    let activeSceneId = null;
-
-    // staged: currently selected item within active scene
-    let staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
-    let displayWindow = null;
 
     function getActiveScene() {
       return scenes.find(s => s.id === activeSceneId) || null;
@@ -403,10 +713,136 @@
       return s ? (s.items || []) : [];
     }
 
+    async function requestFolderPermission() {
+      try {
+        folderHandle = await window.showDirectoryPicker();
+        await saveFolderHandle(folderHandle);
+        updateFolderUI(true);
+        await scanAndRestoreLocalFiles();
+      } catch (err) {
+        console.warn("Folder picker declined or unsupported:", err);
+      }
+    }
+
+    async function verifySavedFolderAccess() {
+      folderHandle = await loadFolderHandle();
+      if (!folderHandle) {
+        updateFolderUI(false);
+        return;
+      }
+      
+      const options = { mode: 'read' };
+      if ((await folderHandle.queryPermission(options)) === 'granted') {
+        updateFolderUI(true);
+        await scanAndRestoreLocalFiles();
+      } else {
+        const banner = document.getElementById('folder-sync-banner');
+        const txt = document.getElementById('folder-status-txt');
+        const btn = document.getElementById('folder-action-btn');
+        banner.className = "sync-status-banner";
+        txt.textContent = "🔒 Folder access locked by browser refresh.";
+        btn.textContent = "🔓 Unlock Media Folder";
+        btn.onclick = async () => {
+          if ((await folderHandle.requestPermission(options)) === 'granted') {
+            updateFolderUI(true);
+            await scanAndRestoreLocalFiles();
+          }
+        };
+      }
+    }
+
+    function updateFolderUI(isConnected) {
+      const banner = document.getElementById('folder-sync-banner');
+      const txt = document.getElementById('folder-status-txt');
+      const btn = document.getElementById('folder-action-btn');
+
+      if (isConnected) {
+        banner.className = "sync-status-banner connected";
+        txt.textContent = "✅ Workspace folder connected & synchronized.";
+        btn.textContent = "Change Folder";
+        btn.onclick = requestFolderPermission;
+      } else {
+        banner.className = "sync-status-banner";
+        txt.textContent = "📁 No workspace folder connected yet.";
+        btn.textContent = "Setup Media Folder";
+        btn.onclick = requestFolderPermission;
+      }
+    }
+
+    async function scanAndRestoreLocalFiles() {
+      if (!folderHandle) return;
+      let matchedAny = false;
+      discoveredWorkspaceImages = {};
+
+      try {
+        for await (const entry of folderHandle.values()) {
+          if (entry.kind === 'file') {
+            const lowerName = entry.name.toLowerCase();
+            if (lowerName.endsWith('.png') || lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg') || lowerName.endsWith('.webp') || lowerName.endsWith('.gif')) {
+              const fileData = await entry.getFile();
+              const objectUrl = URL.createObjectURL(fileData);
+              discoveredWorkspaceImages[entry.name] = objectUrl;
+            }
+          }
+        }
+      } catch (err) {}
+
+      populateBackgroundSelector();
+
+      for (let scene of scenes) {
+        for (let item of scene.items) {
+          if (item.type !== 'url' && item.name) {
+            try {
+              const fileHandle = await folderHandle.getFileHandle(item.name);
+              const fileData = await fileHandle.getFile();
+              item.value = URL.createObjectURL(fileData);
+              matchedAny = true;
+            } catch (e) {
+              item.value = ''; 
+            }
+          }
+        }
+      }
+
+      if (matchedAny) {
+        renderSceneDeckUI();
+        if (staged.sceneItemIndex !== -1) {
+          setStagedFromSceneIndex(staged.sceneItemIndex);
+        }
+      }
+
+      const savedBg = localStorage.getItem(LS_BG_TARGET);
+      if (savedBg && discoveredWorkspaceImages[savedBg]) {
+        channel.postMessage({ command: 'UPDATE_BACKGROUND_SOURCE', value: discoveredWorkspaceImages[savedBg] });
+      }
+    }
+
+    function populateBackgroundSelector() {
+      const select = document.getElementById('header-bg-selector');
+      if (!select) return;
+      
+      const currentSelection = localStorage.getItem(LS_BG_TARGET) || "";
+      select.innerHTML = '<option value="">-- Choose Background Image --</option>';
+
+      Object.keys(discoveredWorkspaceImages).sort().forEach(filename => {
+        const opt = document.createElement('option');
+        opt.value = filename;
+        opt.textContent = filename;
+        if (filename === currentSelection) opt.selected = true;
+        select.appendChild(opt);
+      });
+    }
+
+    function changeBackgroundTarget(filename) {
+      localStorage.setItem(LS_BG_TARGET, filename);
+      const url = discoveredWorkspaceImages[filename] || "";
+      channel.postMessage({ command: 'UPDATE_BACKGROUND_SOURCE', value: url });
+    }
+
     function setStagedFromSceneIndex(idx) {
       const deck = getActiveDeck();
       if (!deck[idx]) {
-        staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
+        staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
         renderPreview();
         setSlideStatus();
         renderSceneDeckUI();
@@ -416,8 +852,9 @@
       staged.sceneItemIndex = idx;
       staged.type = deck[idx].type;
       staged.value = deck[idx].value;
-      staged.file = deck[idx].file || null;
       staged.page = 1;
+      staged.videoTime = 0;
+      staged.videoPlaying = false;
 
       renderSceneDeckUI();
       renderPreview();
@@ -426,12 +863,22 @@
 
     function persistScenes() {
       try {
-        localStorage.setItem(LS_KEY, JSON.stringify(scenes));
+        const cleanScenes = scenes.map(scene => ({
+          id: scene.id,
+          name: scene.name,
+          items: (scene.items || []).map(item => ({
+            id: item.id,
+            type: item.type,
+            value: item.type === 'url' ? item.value : '', 
+            name: item.name || ''
+          }))
+        }));
+        localStorage.setItem(LS_KEY, JSON.stringify(cleanScenes));
         localStorage.setItem(LS_ACTIVE_SCENE, activeSceneId || '');
       } catch (e) {}
     }
 
-    function loadScenes() {
+    async function loadScenes() {
       const raw = localStorage.getItem(LS_KEY);
       const parsed = safeJsonParse(raw, null);
       scenes = Array.isArray(parsed) ? parsed : [];
@@ -464,11 +911,11 @@
         const renameBtn = document.createElement('button');
         renameBtn.className = 'mini-btn';
         renameBtn.textContent = 'Rename';
-        renameBtn.onclick = (e) => {
+        renameBtn.onclick = async (e) => {
           e.stopPropagation();
-          const next = prompt('Rename scene:', s.name || '');
-          if (!next) return;
-          s.name = next.trim();
+          const res = await showModal('Rename Scene', 'Enter the new name for this scene:', true, s.name || '');
+          if (!res.confirmed || !res.value.trim()) return;
+          s.name = res.value.trim();
           persistScenes();
           renderSceneList();
         };
@@ -476,11 +923,11 @@
         const delBtn = document.createElement('button');
         delBtn.className = 'mini-btn';
         delBtn.textContent = '🗑';
-        delBtn.title = 'Delete scene';
-        delBtn.onclick = (e) => {
+        delBtn.onclick = async (e) => {
           e.stopPropagation();
-          const ok = confirm(`Delete scene "${s.name || 'Untitled'}"?`);
-          if (!ok) return;
+          const res = await showModal('Delete Scene', `Are you sure you want to permanently delete scene "${s.name || 'Untitled'}"?`, false);
+          if (!res.confirmed) return;
+          
           scenes = scenes.filter(x => x.id !== s.id);
           if (scenes.length === 0) {
             const ns = { id: uid(), name: 'Scene 1', items: [] };
@@ -489,7 +936,7 @@
           } else if (activeSceneId === s.id) {
             activeSceneId = scenes[0].id;
           }
-          staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
+          staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
           persistScenes();
           renderSceneList();
           renderSceneDeckUI();
@@ -502,7 +949,7 @@
 
         el.onclick = () => {
           activeSceneId = s.id;
-          staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
+          staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
           const deck = getActiveDeck();
           if (deck.length > 0) setStagedFromSceneIndex(0);
           else {
@@ -514,7 +961,6 @@
           renderSceneList();
         };
 
-        right.appendChild(renameBtn);
         el.appendChild(name);
         el.appendChild(right);
         list.appendChild(el);
@@ -528,13 +974,63 @@
       const s = { id: uid(), name: nextName, items: [] };
       scenes.push(s);
       activeSceneId = s.id;
-      staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
+      staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
       if (input) input.value = '';
       persistScenes();
       renderSceneList();
       renderSceneDeckUI();
       renderPreview();
       setSlideStatus();
+    }
+
+    function handleUpload(event) {
+      const files = event.target.files;
+      if (!files || files.length === 0) return;
+      const scene = getActiveScene();
+      if (!scene) return;
+
+      Array.from(files).forEach(f => {
+        let type = 'image';
+        if (f.type.includes('video')) type = 'video';
+        else if (f.type.includes('pdf')) type = 'pdf';
+
+        const objectUrl = URL.createObjectURL(f);
+        scene.items.push({
+          id: uid(),
+          type: type,
+          value: objectUrl,
+          name: f.name
+        });
+      });
+
+      persistScenes();
+      renderSceneDeckUI();
+      if (staged.type === 'none' && scene.items.length > 0) {
+        setStagedFromSceneIndex(scene.items.length - files.length);
+      }
+      event.target.value = ''; 
+    }
+
+    function stageWebLinkToActiveScene() {
+      const input = document.getElementById('web-url-input');
+      const raw = input ? input.value : '';
+      const clean = normalizeUrl(raw);
+      if (!clean) return;
+
+      const scene = getActiveScene();
+      if (!scene) return;
+
+      scene.items.push({
+        id: uid(),
+        type: 'url',
+        value: clean,
+        name: 'Embedded Link'
+      });
+
+      if (input) input.value = '';
+      persistScenes();
+      renderSceneDeckUI();
+      setStagedFromSceneIndex(scene.items.length - 1);
     }
 
     function renderSceneDeckUI() {
@@ -548,55 +1044,57 @@
         thumb.className = 'thumb-item';
         thumb.id = `slide-thumb-${index}`;
 
-
-        if (item.type === 'image') {
+        if (item.type === 'image' && item.value) {
           thumb.innerHTML = `<img src="${item.value}" alt="" />`;
-        } else if (item.type === 'video') {
-          thumb.style.background = '#050505';
-          thumb.innerHTML = `<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#ddd; font-weight:800;">▶ Video</div>`;
-        } else if (item.type === 'pdf') {
-          thumb.style.background = '#050505';
-          thumb.innerHTML = `<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#ddd; font-weight:800;">PDF</div>`;
         } else {
           thumb.style.background = '#050505';
-          thumb.innerHTML = `<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; color:#ddd; font-weight:800;">LINK</div>`;
+          let labelText = item.type.toUpperCase();
+          if (item.type === 'url') labelText = 'CANVA';
+          
+          let brokenBadge = '';
+          if (item.type !== 'url' && !item.value) {
+            brokenBadge = `<div style="color:var(--accent-red); font-size:10px; margin-top:2px;">⚠️ Folder Unlinked</div>`;
+          }
+
+          thumb.innerHTML = `<div style="position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; color:#ddd; font-weight:800; font-size:12px; text-align:center; padding:4px;">
+            <div>${labelText}</div>
+            <div class="file-meta-tag">${item.name || 'No Name'}</div>
+            ${brokenBadge}
+          </div>`;
         }
 
         if (index === staged.sceneItemIndex && staged.type !== 'none') {
           thumb.classList.add('active');
         }
 
-        // Delete icon for item
         const del = document.createElement('div');
         del.textContent = '✕';
-        del.title = 'Delete item';
         del.style.position = 'absolute';
         del.style.top = '6px';
         del.style.right = '6px';
-        del.style.width = '26px';
-        del.style.height = '26px';
+        del.style.width = '24px';
+        del.style.height = '24px';
         del.style.display = 'flex';
         del.style.alignItems = 'center';
         del.style.justifyContent = 'center';
         del.style.borderRadius = '999px';
-        del.style.background = 'rgba(0,0,0,0.55)';
-        del.style.border = '1px solid rgba(255,255,255,0.18)';
+        del.style.background = 'rgba(0,0,0,0.65)';
         del.style.color = '#fff';
         del.style.fontWeight = '900';
         del.style.zIndex = '5';
-        del.onclick = (e) => {
+        del.onclick = async (e) => {
           e.stopPropagation();
-          const ok = confirm('Delete this media item from the active scene?');
-          if (!ok) return;
+          const res = await showModal('Delete Media Asset', `Are you sure you want to remove "${item.name || 'this item'}" from the scene queue?`, false);
+          if (!res.confirmed) return;
+
           const scene = getActiveScene();
           if (!scene || !scene.items || !scene.items[index]) return;
           scene.items.splice(index, 1);
 
-          // Adjust staged selection
           if (scene.items.length === 0) {
-            staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
+            staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
           } else if (staged.sceneItemIndex === index) {
-            staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
+            staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
             setStagedFromSceneIndex(Math.min(index, scene.items.length - 1));
           } else if (staged.sceneItemIndex > index) {
             staged.sceneItemIndex = staged.sceneItemIndex - 1;
@@ -609,45 +1107,101 @@
         };
         thumb.appendChild(del);
 
-        thumb.onclick = () => setStagedFromSceneIndex(index);
+        thumb.onclick = () => {
+          setStagedFromSceneIndex(index);
+        };
         container.appendChild(thumb);
       });
-
-      if (deck.length === 0) {
-        staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1 };
-        renderPreview();
-        setSlideStatus();
-      }
     }
 
-    // ===== PDF runtime =====
-    let pdfDoc = null;
-    function clearRuntime() { pdfDoc = null; }
-
-    // ===== Live / Preview =====
     function setSlideStatus() {
       const el = document.getElementById('slide-status');
+      const lensDeck = document.getElementById('canva-lens-deck');
       if (!el) return;
 
       if (staged.type === 'none') {
         el.textContent = 'No media queued';
-        return;
-      }
-
-      if (staged.type === 'pdf') {
-        const deck = getActiveDeck();
-        el.textContent = `PDF: ${staged.sceneItemIndex + 1}/${deck.length} (Page ${staged.page})`;
-        return;
-      }
-
-      if (staged.type === 'video') {
-        const deck = getActiveDeck();
-        el.textContent = `Video: ${staged.sceneItemIndex + 1}/${deck.length}`;
+        if (lensDeck) lensDeck.style.display = 'none';
         return;
       }
 
       const deck = getActiveDeck();
-      el.textContent = `Slide: ${staged.sceneItemIndex + 1}/${deck.length}`;
+      if (staged.type === 'url') {
+        el.textContent = `Canva Interface Capture Engine Ready`;
+        if (lensDeck) lensDeck.style.display = 'block';
+        return;
+      }
+
+      if (lensDeck) lensDeck.style.display = 'none';
+
+      if (staged.type === 'pdf') {
+        el.textContent = `PDF: ${staged.sceneItemIndex + 1}/${deck.length} (Page ${staged.page})`;
+      } else if (staged.type === 'video') {
+        el.textContent = `Video performance triggers attached`;
+      } else {
+        el.textContent = `Slide: ${staged.sceneItemIndex + 1}/${deck.length}`;
+      }
+    }
+
+    async function initializePrecisionLens() {
+      const btn = document.getElementById('lens-toggle-btn');
+      if (lensCaptureStream) {
+        stopPrecisionLens();
+        return;
+      }
+      try {
+        lensCaptureStream = await navigator.mediaDevices.getDisplayMedia({
+          video: { preferCurrentTab: true, frameRate: 30 },
+          audio: false
+        });
+        if (btn) {
+          btn.textContent = "🛑 Stop Preview Frame Sync";
+          btn.style.backgroundColor = "var(--accent-red)";
+        }
+        const hiddenVideo = document.createElement('video');
+        hiddenVideo.srcObject = lensCaptureStream;
+        hiddenVideo.play();
+
+        const cropCanvas = document.createElement('canvas');
+        const cropContext = cropCanvas.getContext('2d');
+
+        lensLoopInterval = setInterval(() => {
+          const previewElement = document.getElementById('preview-viewport');
+          if (!previewElement || hiddenVideo.readyState < 2) return;
+
+          const rect = previewElement.getBoundingClientRect();
+          cropCanvas.width = rect.width;
+          cropCanvas.height = rect.height;
+
+          cropContext.drawImage(
+            hiddenVideo,
+            rect.left * (hiddenVideo.videoWidth / window.innerWidth),
+            rect.top * (hiddenVideo.videoHeight / window.innerHeight),
+            rect.width * (hiddenVideo.videoWidth / window.innerWidth),
+            rect.height * (hiddenVideo.videoHeight / window.innerHeight),
+            0, 0, rect.width, rect.height
+          );
+
+          const precisionFrame = cropCanvas.toDataURL('image/jpeg', 0.85);
+          channel.postMessage({ command: 'UPDATE_MIRROR_LENS_FRAME', frame: precisionFrame });
+        }, 33);
+
+        lensCaptureStream.getVideoTracks()[0].onended = () => { stopPrecisionLens(); };
+      } catch (err) {}
+    }
+
+    function stopPrecisionLens() {
+      if (lensLoopInterval) { clearInterval(lensLoopInterval); lensLoopInterval = null; }
+      if (lensCaptureStream) {
+        lensCaptureStream.getTracks().forEach(t => t.stop());
+        lensCaptureStream = null;
+      }
+      const btn = document.getElementById('lens-toggle-btn');
+      if (btn) {
+        btn.textContent = "⚡ Start Preview Target Sync";
+        btn.style.backgroundColor = "var(--accent-purple)";
+      }
+      channel.postMessage({ command: 'CLEAR_MIRROR_LENS' });
     }
 
     async function renderPreview() {
@@ -665,6 +1219,13 @@
         return;
       }
 
+      if (!staged.value) {
+        target.appendChild(placeholder);
+        placeholder.style.color = '#aaa';
+        placeholder.innerHTML = `<div>⚠️ File unlinked. Unlock folder token above to scan.</div>`;
+        return;
+      }
+
       if (staged.type === 'image') {
         const img = document.createElement('img');
         img.src = staged.value;
@@ -675,391 +1236,386 @@
       if (staged.type === 'video') {
         const video = document.createElement('video');
         video.src = staged.value;
-        video.controls = true;
-        video.autoplay = false;
-        video.playsInline = true;
-        video.muted = true;
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'contain';
+        video.controls = false; video.muted = true;
         target.appendChild(video);
+
+        const videoToolbar = document.createElement('div');
+        videoToolbar.className = 'video-toolbar';
+        videoToolbar.innerHTML = `
+          <button id="preview-vid-toggle-btn" onclick="togglePreviewVideo()">▶ Play</button>
+          <button onclick="controlPreviewVideo('rewind')">⏪ Reset</button>
+          <span id="vid-runtime-lbl">0:00</span>
+        `;
+        target.appendChild(videoToolbar);
+
+        video.ontimeupdate = () => {
+          const lbl = document.getElementById('vid-runtime-lbl');
+          if (lbl) lbl.textContent = new Date(video.currentTime * 1000).toISOString().substr(14, 5);
+          staged.videoTime = video.currentTime;
+          channel.postMessage({ command: 'SYNC_VIDEO_STATE', time: video.currentTime, playing: staged.videoPlaying });
+        };
+        
+        video.onended = () => {
+          staged.videoPlaying = false;
+          const btn = document.getElementById('preview-vid-toggle-btn');
+          if (btn) btn.textContent = "▶ Play";
+        };
         return;
       }
 
       if (staged.type === 'url') {
         const iframe = document.createElement('iframe');
         iframe.src = staged.value;
-        iframe.style.border = 'none';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
+        iframe.style.width = '100%'; iframe.style.height = '100%';
         iframe.setAttribute('allow', 'fullscreen');
-
-        // Best-effort sync hook.
-        iframe.onload = () => {
-          try {
-            iframe.contentWindow?.postMessage({ command: 'REQUEST_STATE' }, '*');
-          } catch (e) {}
-        };
-
         target.appendChild(iframe);
         return;
       }
 
       if (staged.type === 'pdf') {
         const wrap = document.createElement('div');
-        wrap.style.width = '100%';
-        wrap.style.height = '100%';
-        wrap.style.display = 'flex';
-        wrap.style.alignItems = 'center';
-        wrap.style.justifyContent = 'center';
+        wrap.style.width = '100%'; wrap.style.height = '100%';
+        wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.justifyContent = 'center';
         wrap.innerHTML = `<div style="color:#666; padding:16px;">Loading PDF...</div>`;
         target.appendChild(wrap);
 
         try {
-          clearRuntime();
+          pdfDoc = null;
           const loadingTask = pdfjsLib.getDocument(staged.value);
           pdfDoc = await loadingTask.promise;
-
           const pageNum = Math.max(1, Math.min(staged.page, pdfDoc.numPages));
           staged.page = pageNum;
 
           const page = await pdfDoc.getPage(pageNum);
           const viewport = page.getViewport({ scale: 1.6 });
-
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          canvas.width = viewport.width; canvas.height = viewport.height;
 
           await page.render({ canvasContext: ctx, viewport }).promise;
-
           wrap.innerHTML = '';
-          canvas.style.width = '100%';
-          canvas.style.height = '100%';
-          canvas.style.objectFit = 'contain';
+          canvas.style.width = '100%'; canvas.style.height = '100%'; canvas.style.objectFit = 'contain';
           wrap.appendChild(canvas);
 
           const toolbar = document.createElement('div');
           toolbar.className = 'pdf-toolbar';
           toolbar.innerHTML = `
-            <button onclick="setPdfPage(staged.page-1);" style="padding:6px 10px; background:#7d3cff; border-radius:6px; font-weight:800;">◀</button>
-            <span id="pdf-page-text">Page ${pageNum} / ${pdfDoc.numPages}</span>
-            <input id="pdf-page-slider" type="range" min="1" max="${pdfDoc.numPages}" step="1" value="${pageNum}" oninput="setPdfPage(parseInt(this.value,10));" />
-            <button onclick="setPdfPage(staged.page+1);" style="padding:6px 10px; background:#28a745; border-radius:6px; font-weight:800;">▶</button>
+            <button onclick="setPdfPage(staged.page-1);">◀</button>
+            <span>Page ${pageNum} / ${pdfDoc.numPages}</span>
+            <input type="range" min="1" max="${pdfDoc.numPages}" value="${pageNum}" oninput="setPdfPage(parseInt(this.value,10));" />
+            <button onclick="setPdfPage(staged.page+1);">▶</button>
           `;
           target.appendChild(toolbar);
         } catch (e) {
-          console.error('PDF render failed (preview)', e);
-          wrap.innerHTML = `<div style="color:#ccc; padding:16px;">PDF render failed</div>`;
-          if (e && e.message) {
-            wrap.innerHTML += `<div style="margin-top:10px; font-size:11px; color:#999; word-break:break-word;">${String(e.message).slice(0,500)}</div>`;
-          }
+          wrap.innerHTML = `<div style="color:#ccc; padding:16px;">PDF rendering failed</div>`;
         }
       }
+    }
+
+    function togglePreviewVideo() {
+      const vid = document.querySelector('#preview-viewport video');
+      const btn = document.getElementById('preview-vid-toggle-btn');
+      if (!vid || !btn) return;
+
+      if (vid.paused) {
+        vid.play();
+        staged.videoPlaying = true;
+        btn.textContent = "⏹ Stop";
+      } else {
+        vid.pause();
+        staged.videoPlaying = false;
+        btn.textContent = "▶ Play";
+      }
+      channel.postMessage({ command: 'SYNC_VIDEO_STATE', time: vid.currentTime, playing: staged.videoPlaying });
+    }
+
+    function controlPreviewVideo(action) {
+      const vid = document.querySelector('#preview-viewport video');
+      if (!vid) return;
+      if (action === 'rewind') { 
+        vid.currentTime = 0; 
+      }
+      channel.postMessage({ command: 'SYNC_VIDEO_STATE', time: vid.currentTime, playing: staged.videoPlaying });
     }
 
     function setPdfPage(page) {
       if (staged.type !== 'pdf') return;
-      const next = Math.max(1, page);
-      staged.page = next;
+      staged.page = Math.max(1, page);
       setSlideStatus();
       renderPreview();
-      channel.postMessage({ command: 'RENDER_OUTPUT', payload: staged });
+      const tType = document.getElementById('transition-type-select')?.value || 'fade';
+      channel.postMessage({ command: 'TRIGGER_LIVE_FADE', payload: staged, transitionType: tType });
     }
 
     async function renderAudience(payload) {
       const audienceTarget = document.getElementById('audience-view');
-      audienceTarget.innerHTML = '';
+      
+      let bgLayer = document.getElementById('audience-bg-layer');
+      if (!bgLayer) {
+        bgLayer = document.createElement('div');
+        bgLayer.id = 'audience-bg-layer';
+        audienceTarget.appendChild(bgLayer);
+      }
+
+      const tempWrapper = document.createElement('div');
+      tempWrapper.style.width = '100%';
+      tempWrapper.style.height = '100%';
+      tempWrapper.style.position = 'absolute';
 
       if (!payload || payload.type === 'none') return;
+      if (!payload.value) {
+        audienceTarget.innerHTML = `<div style="color:#bbb; padding:16px; text-align:center;">Local file data unlinked. Unlock folder on control panel.</div>`;
+        audienceTarget.appendChild(bgLayer);
+        return;
+      }
 
       if (payload.type === 'image') {
         const img = document.createElement('img');
-        img.src = payload.file ? URL.createObjectURL(payload.file) : payload.value;
-        audienceTarget.appendChild(img);
-        return;
-      }
-
-      if (payload.type === 'video') {
+        img.src = payload.value;
+        tempWrapper.appendChild(img);
+      } else if (payload.type === 'video') {
         const video = document.createElement('video');
-        const sourceUrl = payload.file ? URL.createObjectURL(payload.file) : payload.value;
-        video.src = sourceUrl;
-        video.controls = false;
-        video.autoplay = true;
-        video.playsInline = true;
-        video.muted = true;
-        video.style.width = '100%';
-        video.style.height = '100%';
-        video.style.objectFit = 'contain';
-        audienceTarget.appendChild(video);
-
-        const tryPlay = async () => {
-          try { await video.play(); } catch (e) {}
-        };
-        if (video.readyState >= 2) tryPlay();
-        else video.addEventListener('loadeddata', tryPlay, { once: true });
-        return;
-      }
-
-      if (payload.type === 'url') {
+        video.id = "audience-live-video";
+        video.src = payload.value;
+        video.controls = false; 
+        video.style.width = '100%'; video.style.height = '100%'; video.style.objectFit = 'contain';
+        tempWrapper.appendChild(video);
+        video.currentTime = payload.videoTime || 0;
+        if (payload.videoPlaying) video.play();
+      } else if (payload.type === 'url') {
         const iframe = document.createElement('iframe');
         iframe.src = payload.value;
-        iframe.style.border = 'none';
-        iframe.style.width = '100%';
-        iframe.style.height = '100%';
-        iframe.setAttribute('allow', 'fullscreen');
-        audienceTarget.appendChild(iframe);
+        iframe.style.border = 'none'; iframe.style.width = '100%'; iframe.style.height = '100%';
+        tempWrapper.appendChild(iframe);
+      } else if (payload.type === 'pdf') {
+        const wrap = document.createElement('div');
+        wrap.style.width = '100%'; wrap.style.height = '100%';
+        wrap.style.display = 'flex'; wrap.style.alignItems = 'center'; wrap.style.justifyContent = 'center';
+        tempWrapper.appendChild(wrap);
+
+        try {
+          const doc = await pdfjsLib.getDocument({ url: payload.value, withCredentials: false }).promise;
+          const pageNum = Math.max(1, Math.min(payload.page || 1, doc.numPages));
+          const page = await doc.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 1.6 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = viewport.width; canvas.height = viewport.height;
+
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          canvas.style.width = '100%'; canvas.style.height = '100%'; canvas.style.objectFit = 'contain';
+          wrap.appendChild(canvas);
+        } catch (e) {
+          wrap.innerHTML = `<div>PDF rendering failed</div>`;
+        }
+      }
+
+      const extensions = Array.from(audienceTarget.children).filter(el => el.id !== 'audience-bg-layer');
+      extensions.forEach(el => el.remove());
+      audienceTarget.appendChild(tempWrapper);
+    }
+
+    function fireLive() {
+      const transType = document.getElementById('transition-type-select').value;
+      channel.postMessage({ command: 'TRIGGER_LIVE_FADE', payload: staged, transitionType: transType });
+    }
+
+    function toggleFadeToBlack() {
+      isFTBActive = !isFTBActive;
+      
+      if (isFTBActive && isFTGActive) {
+        toggleFadeToBackground();
+      }
+
+      const btn = document.getElementById('ftb-toggle-btn');
+      if (isFTBActive) {
+        btn.classList.add('active');
+        btn.textContent = "🔴 Blackout Active";
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = "⚫ Fade To Black";
+      }
+      channel.postMessage({ command: 'TOGGLE_FTB_STATE', active: isFTBActive });
+    }
+
+    function toggleFadeToBackground() {
+      const currentBgFile = localStorage.getItem(LS_BG_TARGET);
+      if (!currentBgFile && !isFTGActive) {
+        showModal("Background Image Required", "Please choose an image file from the dropdown list before triggering background fade.", false);
         return;
       }
 
-      if (payload.type === 'pdf') {
-        const wrap = document.createElement('div');
-        wrap.style.width = '100%';
-        wrap.style.height = '100%';
-        wrap.style.display = 'flex';
-        wrap.style.alignItems = 'center';
-        wrap.style.justifyContent = 'center';
-        wrap.innerHTML = `<div style="color:#aaa; padding:16px;">Loading PDF...</div>`;
-        audienceTarget.appendChild(wrap);
+      isFTGActive = !isFTGActive;
 
-        try {
-          const docUrl = payload.file ? URL.createObjectURL(payload.file) : payload.value;
-          const doc = await pdfjsLib.getDocument({ url: docUrl, withCredentials: false }).promise;
-          const pageNum = Math.max(1, Math.min(payload.page || 1, doc.numPages));
-
-          const page = await doc.getPage(pageNum);
-          const viewport = page.getViewport({ scale: 1.6 });
-
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-
-          await page.render({ canvasContext: ctx, viewport }).promise;
-
-          wrap.innerHTML = '';
-          canvas.style.width = '100%';
-          canvas.style.height = '100%';
-          canvas.style.objectFit = 'contain';
-          wrap.appendChild(canvas);
-        } catch (e) {
-          console.error('PDF render failed (audience)', e);
-          wrap.innerHTML = `<div style="color:#ddd; padding:16px;">PDF render failed</div>`;
-        }
+      if (isFTGActive && isFTBActive) {
+        toggleFadeToBlack();
       }
-    
+
+      const btn = document.getElementById('ftg-toggle-btn');
+      if (isFTGActive) {
+        btn.classList.add('active');
+        btn.textContent = "🔮 Background Active";
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = "🖼️ Fade To Background";
+      }
+      channel.postMessage({ command: 'TOGGLE_FTG_STATE', active: isFTGActive });
     }
-    let lastIncoming = null;
 
-    // Sync from Canva iframe (only if embed supports messaging)
-    window.addEventListener('message', (event) => {
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
-      if (data.command !== 'CANVA_SLIDE_STATE' && data.command !== 'CANVA_CURRENT_PAGE') return;
-
-      // Best-effort: if state contains an URL, mirror it.
-      if (data.payload && typeof data.payload === 'object' && data.payload.url) {
-        staged = { type: 'url', value: data.payload.url, sceneItemIndex: -1, page: 1 };
-        setSlideStatus();
-        channel.postMessage({ command: 'RENDER_OUTPUT', payload: staged });
-      }
-    });
+    function closeDisplayScreen() {
+      if (displayWindow) { displayWindow.close(); displayWindow = null; }
+      channel.postMessage({ command: 'CLOSE_DISPLAY' });
+    }
 
     channel.onmessage = async (event) => {
       const msg = event.data;
       if (!msg) return;
 
-      if (msg.command === 'RENDER_OUTPUT') {
+      if (msg.command === 'TRIGGER_LIVE_FADE') {
         lastIncoming = msg.payload;
-
-        // Operator window: update local preview live if desired.
         if (!document.body.classList.contains('live-window-mode')) {
           staged = msg.payload;
           setSlideStatus();
-          // No-op: preview renders from staged when user selects.
-          // We do not force re-render here to avoid fighting Canva interactions.
         }
+        const view = document.getElementById('audience-view');
+        if (view) {
+          if (msg.transitionType === 'fade') {
+            view.classList.add('fade-transition');
+            view.classList.add('fade-out-active');
+            setTimeout(async () => {
+              if (document.body.classList.contains('live-window-mode')) await renderAudience(msg.payload);
+              view.classList.remove('fade-out-active');
+            }, 600);
+          } else {
+            view.classList.remove('fade-transition');
+            view.classList.remove('fade-out-active');
+            if (document.body.classList.contains('live-window-mode')) await renderAudience(msg.payload);
+          }
+        }
+      }
 
-        // Audience projector
+      if (msg.command === 'TOGGLE_FTB_STATE') {
+        const view = document.getElementById('audience-view');
+        if (view) {
+          if (msg.active) view.classList.add('ftb-active');
+          else view.classList.remove('ftb-active');
+        }
+      }
+
+      if (msg.command === 'TOGGLE_FTG_STATE') {
+        const bgLayer = document.getElementById('audience-bg-layer');
+        if (bgLayer) {
+          if (msg.active) bgLayer.classList.add('active');
+          else bgLayer.classList.remove('active');
+        }
+      }
+
+      if (msg.command === 'UPDATE_BACKGROUND_SOURCE') {
+        const bgLayer = document.getElementById('audience-bg-layer');
+        if (bgLayer) {
+          if (msg.value) {
+            bgLayer.innerHTML = `<img src="${msg.value}" alt="Background View" />`;
+          } else {
+            bgLayer.innerHTML = '';
+          }
+        }
+      }
+
+      if (msg.command === 'SYNC_VIDEO_STATE') {
         if (document.body.classList.contains('live-window-mode')) {
-          await renderAudience(msg.payload);
+          const liveVid = document.getElementById('audience-live-video');
+          if (liveVid) {
+            if (Math.abs(liveVid.currentTime - msg.time) > 0.5) liveVid.currentTime = msg.time;
+            if (msg.playing && liveVid.paused) liveVid.play();
+            if (!msg.playing && !liveVid.paused) liveVid.pause();
+          }
+        }
+      }
+
+      if (msg.command === 'UPDATE_MIRROR_LENS_FRAME') {
+        if (document.body.classList.contains('live-window-mode')) {
+          const targetView = document.getElementById('audience-view');
+          if (targetView) {
+            let mirrorImg = document.getElementById('audience-precision-lens-frame');
+            if (!mirrorImg) {
+              const bgLayer = document.getElementById('audience-bg-layer');
+              targetView.innerHTML = ''; 
+              if (bgLayer) targetView.appendChild(bgLayer);
+              
+              mirrorImg = document.createElement('img');
+              mirrorImg.id = 'audience-precision-lens-frame';
+              mirrorImg.style.width = '100%'; mirrorImg.style.height = '100%'; mirrorImg.style.objectFit = 'contain';
+              targetView.appendChild(mirrorImg);
+            }
+            mirrorImg.src = msg.frame;
+          }
+        }
+      }
+
+      if (msg.command === 'CLEAR_MIRROR_LENS') {
+        if (document.body.classList.contains('live-window-mode') && lastIncoming) renderAudience(lastIncoming);
+      }
+
+      if (msg.command === 'CLOSE_DISPLAY') {
+        const view = document.getElementById('audience-view');
+        if (view) {
+          view.classList.add('fade-transition', 'fade-out-active');
+          setTimeout(() => { 
+            const bgLayer = document.getElementById('audience-bg-layer');
+            view.innerHTML = ''; 
+            if (bgLayer) view.appendChild(bgLayer);
+          }, 600);
         }
       }
 
       if (msg.command === 'REQUEST_CURRENT_OUTPUT') {
-        if (lastIncoming) {
-          channel.postMessage({ command: 'RENDER_OUTPUT', payload: lastIncoming });
-        } else if (staged.type !== 'none') {
-          channel.postMessage({ command: 'RENDER_OUTPUT', payload: staged });
+        if (lastIncoming) channel.postMessage({ command: 'TRIGGER_LIVE_FADE', payload: lastIncoming, transitionType: 'cut' });
+        else if (staged.type !== 'none') channel.postMessage({ command: 'TRIGGER_LIVE_FADE', payload: staged, transitionType: 'cut' });
+        
+        channel.postMessage({ command: 'TOGGLE_FTB_STATE', active: isFTBActive });
+        channel.postMessage({ command: 'TOGGLE_FTG_STATE', active: isFTGActive });
+        const savedBg = localStorage.getItem(LS_BG_TARGET);
+        if (savedBg && discoveredWorkspaceImages[savedBg]) {
+          channel.postMessage({ command: 'UPDATE_BACKGROUND_SOURCE', value: discoveredWorkspaceImages[savedBg] });
         }
       }
     };
 
-    window.addEventListener('message', async (event) => {
-      if (event.origin !== window.location.origin) return;
-      const msg = event.data;
-      if (!msg || typeof msg !== 'object') return;
-
-      if (msg.command === 'RENDER_OUTPUT') {
-        lastIncoming = msg.payload;
-        if (document.body.classList.contains('live-window-mode')) {
-          await renderAudience(msg.payload);
-        }
-      }
-
-      if (msg.command === 'REQUEST_CURRENT_OUTPUT') {
-        if (lastIncoming) {
-          event.source?.postMessage({ command: 'RENDER_OUTPUT', payload: lastIncoming }, event.origin);
-        } else if (staged.type !== 'none') {
-          event.source?.postMessage({ command: 'RENDER_OUTPUT', payload: staged }, event.origin);
-        }
-      }
-    });
-
     function openDisplayWindow() {
       const base = window.location.href.split('?')[0];
-      const displayUrl = base + '?display=true';
-      displayWindow = window.open(
-        displayUrl,
-        'ProjectorOutputWindow',
-        'toolbar=no,menubar=no,status=no,location=no,scrollbars=no,resizable=yes,width=1280,height=720'
-      );
-
-      if (displayWindow) {
-        try {
-          displayWindow.addEventListener('load', () => {
-            try {
-              if (staged.type !== 'none') {
-                displayWindow.postMessage({ command: 'RENDER_OUTPUT', payload: staged }, window.location.origin);
-              }
-            } catch (e) {
-              // Ignore; BroadcastChannel fallback will still work.
-            }
-          });
-        } catch (e) {
-          // Ignore.
-        }
-      }
-
-      setTimeout(() => {
-        try {
-          channel.postMessage({ command: 'REQUEST_CURRENT_OUTPUT' });
-        } catch (e) {}
-      }, 250);
-
-      const tick = setInterval(() => {
-        if (!displayWindow || displayWindow.closed) {
-          clearInterval(tick);
-          return;
-        }
-        try {
-          displayWindow.document.documentElement.requestFullscreen?.();
-          clearInterval(tick);
-        } catch (e) {
-          // ignore
-        }
-      }, 400);
-    }
-
-    function fireLive() {
-      const deck = getActiveDeck();
-
-      // auto-stage first item if nothing selected
-      if (staged.type === 'none' && deck.length > 0) {
-        setStagedFromSceneIndex(0);
-      }
-
-      if (staged.type === 'none') return;
-      channel.postMessage({ command: 'RENDER_OUTPUT', payload: staged });
-
-      // For PDFs, this ensures current page is included.
-      if (staged.type === 'pdf') setSlideStatus();
-    }
-
-    async function handleUpload(event) {
-      const deck = getActiveDeck();
-      if (!activeSceneId) return;
-
-      const files = Array.from(event.target.files || []).sort((a,b)=>a.name.localeCompare(b.name, undefined, {numeric:true}));
-
-      const scene = getActiveScene();
-      if (!scene) return;
-      scene.items = scene.items || [];
-
-      for (const file of files) {
-        if (file.type === 'application/pdf') {
-          scene.items.push({ id: uid(), type: 'pdf', value: URL.createObjectURL(file), file, name: file.name });
-        } else if (file.type.startsWith('video/')) {
-          scene.items.push({ id: uid(), type: 'video', value: URL.createObjectURL(file), file, name: file.name });
-        } else {
-          scene.items.push({ id: uid(), type: 'image', value: URL.createObjectURL(file), file, name: file.name });
-        }
-      }
-
-      persistScenes();
-
-      // Select first newly added item if none staged.
-      const deckNow = getActiveDeck();
-      if (deckNow.length > 0 && staged.type === 'none') {
-        setStagedFromSceneIndex(deckNow.length - files.length);
-      } else {
-        renderSceneDeckUI();
-      }
-
-      event.target.value = '';
-    }
-
-    function stageWebLinkToActiveScene() {
-      const input = document.getElementById('web-url-input');
-      const url = normalizeUrl(input.value);
-      if (!url) return;
-
-      const scene = getActiveScene();
-      if (!scene) return;
-
-      const itemName = 'Canva Embed';
-      const canvaItem = { id: uid(), type: 'url', value: url, name: itemName };
-      scene.items = scene.items || [];
-      scene.items.push(canvaItem);
-
-      // Persist canva URL and full scenes.
-      persistScenes();
-
-      renderSceneDeckUI();
-
-      // Stage this last item
-      const deckNow = getActiveDeck();
-      setStagedFromSceneIndex(deckNow.length - 1);
-
-      if (document.body.classList.contains('live-window-mode')) {
-        channel.postMessage({ command: 'RENDER_OUTPUT', payload: staged });
-      }
-
-      input.value = '';
+      displayWindow = window.open(base + '?display=true', 'ProjectorOutputWindow', 'width=1280,height=720');
     }
 
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') fireLive();
+      if (e.key === 'F11') {
+        e.preventDefault();
+        enterFullscreen();
+        const hint = document.getElementById('fs-hint-overlay');
+        if(hint) hint.remove();
+      }
+
+      if (e.key === 'Enter') {
+        const el = document.activeElement;
+        if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT')) return;
+        e.preventDefault(); fireLive();
+      }
     });
 
-    if (new URLSearchParams(window.location.search).get('display') === 'true') {
-      document.body.classList.add('live-window-mode');
-      channel.postMessage({ command: 'REQUEST_CURRENT_OUTPUT' });
-    }
-
-    // Init
-    loadScenes();
-    renderSceneList();
-    renderSceneDeckUI();
-    // pick first if none
-    if (staged.type === 'none' && getActiveDeck().length > 0) {
-      setStagedFromSceneIndex(0);
-    } else {
-      renderPreview();
-      setSlideStatus();
-    }
+    window.addEventListener('DOMContentLoaded', async () => {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('display') === 'true') {
+        document.body.classList.add('live-window-mode');
+        setupDisplayWindowFeatures(); 
+        channel.postMessage({ command: 'REQUEST_CURRENT_OUTPUT' });
+      } else {
+        await loadScenes(); 
+        await verifySavedFolderAccess();
+        renderSceneList(); 
+        renderSceneDeckUI(); 
+        renderPreview(); 
+        setSlideStatus();
+      }
+    });
   </script>
 </body>
 </html>
-
