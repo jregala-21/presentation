@@ -4,26 +4,54 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>JIL TAGUIG PRESENTER</title>
+  <link rel="icon" type="image/png" href="icon.png">
   <style>
+    /* Premium Modernized Color Variables */
     :root {
-      --bg-dark: #121216;
-      --bg-panel: #1e1e24;
-      --bg-surface: #2a2a35;
-      --border: #3f3f4e;
-      --text: #f5f5f7;
-      --accent-blue: #007acc;
-      --accent-green: #28a745;
-      --accent-purple: #7d3cff;
-      --accent-red: #dc3545;
+      --bg-dark: #0b0b0e;
+      --bg-panel: #14141a;
+      --bg-surface: #1e1e26;
+      --border: #2e2e3a;
+      --text: #f1f1f6;
+      --text-muted: #8e8e9f;
+      --accent-blue: #0084ff;
+      --accent-blue-hover: #1a91ff;
+      --accent-green: #24b451;
+      --accent-purple: #7033ff;
+      --accent-red: #e63946;
       --transition-speed: 0.6s;
+      --ui-radius: 10px;
+      --input-bg: #09090d;
+      --shadow: rgba(0, 0, 0, 0.4);
+    }
+
+    /* Elegant Light Theme Overwrite Variables */
+    body.light-mode {
+      --bg-dark: #f0f2f5;
+      --bg-panel: #ffffff;
+      --bg-surface: #f7f9fa;
+      --border: #dcdfe3;
+      --text: #1c1e21;
+      --text-muted: #606770;
+      --accent-blue: #0066cc;
+      --accent-blue-hover: #0052a3;
+      --accent-green: #1d9a44;
+      --accent-purple: #5c20df;
+      --accent-red: #ce2c3b;
+      --input-bg: #eaedf0;
+      --shadow: rgba(0, 0, 0, 0.08);
     }
 
     * {
       box-sizing: border-box;
+      transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), 
+                  color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                  box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0;
       padding: 0;
       background-color: var(--bg-dark);
@@ -32,60 +60,108 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      -webkit-font-smoothing: antialiased;
     }
 
     header {
-      background-color: #09090c;
-      padding: 10px 20px;
+      background-color: var(--bg-panel);
+      padding: 12px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
-      gap: 10px;
+      gap: 12px;
+      box-shadow: 0 2px 10px var(--shadow);
+      z-index: 50;
     }
 
     header h2 {
       margin: 0;
-      font-size: 1.2rem;
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      background: linear-gradient(90deg, var(--accent-blue), #5c20df);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
     }
+
+    /* Light/Dark Toggle Switch Design */
+    .theme-switch-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .theme-switch {
+      display: inline-block;
+      height: 24px;
+      position: relative;
+      width: 48px;
+    }
+    .theme-switch input { display: none; }
+    .slider {
+      background-color: #3f3f4e;
+      bottom: 0;
+      cursor: pointer;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: 0;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    body.light-mode .slider { background-color: #cbd5e1; }
+    .slider:before {
+      background-color: white;
+      bottom: 3px;
+      content: "";
+      height: 18px;
+      left: 4px;
+      position: absolute;
+      transition: .4s;
+      width: 18px;
+      border-radius: 50%;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    input:checked + .slider { background-color: var(--accent-blue); }
+    input:checked + .slider:before { transform: translateX(22px); }
 
     .main-layout {
       display: grid;
-      grid-template-columns: 360px 1fr;
+      grid-template-columns: 380px 1fr;
       flex-grow: 1;
-      height: calc(100vh - 60px);
+      height: calc(100vh - 65px);
       overflow: hidden;
     }
 
-    @media (max-width: 900px) {
+    @media (max-width: 1024px) {
       .main-layout {
         grid-template-columns: 1fr;
-        grid-template-rows: 1fr 1fr;
+        grid-template-rows: auto 1fr;
         height: auto;
         overflow-y: auto;
       }
-      body {
-        overflow-y: auto;
-      }
+      body { overflow-y: auto; }
     }
 
     .control-panel {
       background-color: var(--bg-panel);
       border-right: 1px solid var(--border);
-      padding: 15px;
+      padding: 20px;
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 16px;
       overflow-y: auto;
       height: 100%;
     }
 
     .preview-panel-container {
-      padding: 20px;
+      background-color: var(--bg-dark);
+      padding: 24px;
       display: flex;
       flex-direction: column;
-      gap: 15px;
+      gap: 20px;
       overflow-y: auto;
       height: 100%;
       justify-content: flex-start;
@@ -93,75 +169,98 @@
 
     .section-box {
       background: var(--bg-surface);
-      padding: 14px;
-      border-radius: 8px;
+      padding: 16px;
+      border-radius: var(--ui-radius);
       border: 1px solid var(--border);
+      box-shadow: 0 4px 6px var(--shadow);
     }
 
     h3 {
       margin-top: 0;
-      margin-bottom: 10px;
-      font-size: 13px;
-      color: #aaa;
+      margin-bottom: 12px;
+      font-size: 11px;
+      color: var(--text-muted);
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      font-weight: 700;
     }
 
     input[type="text"], input[type="file"], select {
       width: 100%;
-      padding: 10px;
-      background: #121216;
+      padding: 10px 14px;
+      background: var(--input-bg);
       border: 1px solid var(--border);
-      color: white;
+      color: var(--text);
       border-radius: 6px;
       margin-bottom: 8px;
       font-size: 14px;
+      outline: none;
+    }
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.2);
     }
 
     button {
       background: var(--accent-blue);
       color: white;
       border: none;
-      padding: 10px 14px;
+      padding: 10px 16px;
       border-radius: 6px;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 600;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      font-size: 14px;
+      gap: 6px;
+      font-size: 13px;
+      transition: opacity 0.15s ease, transform 0.1s ease;
     }
-
-    button:hover { opacity: 0.92; }
+    button:hover {
+      opacity: 0.95;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    button:active {
+      transform: scale(0.98);
+    }
 
     .action-btn {
       flex: 1;
       padding: 14px;
       font-size: 16px;
       background-color: var(--accent-green);
+      letter-spacing: 0.5px;
+      border-radius: 8px;
     }
 
     .deck-list {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-      gap: 10px;
-      margin-top: 10px;
-      max-height: 200px;
+      grid-template-columns: repeat(auto-fill, minmax(105px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+      max-height: 220px;
       overflow-y: auto;
       padding-right: 4px;
     }
 
     .thumb-item {
       border: 2px solid transparent;
-      background: #000;
+      background: #000000;
       cursor: pointer;
       aspect-ratio: 16/9;
       position: relative;
       overflow: hidden;
-      border-radius: 4px;
+      border-radius: 6px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
     }
-
+    .thumb-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+    .thumb-item.active { 
+      border-color: var(--accent-blue); 
+      box-shadow: 0 0 0 3px rgba(0, 132, 255, 0.4);
+    }
     .thumb-item img {
       width: 100%;
       height: 100%;
@@ -169,15 +268,13 @@
       display: block;
     }
 
-    .thumb-item.active { border-color: var(--accent-blue); }
-
     .viewport {
       width: 100%;
       max-width: 1000px;
       margin: 0 auto;
-      background: #000;
-      border: 2px solid #444;
-      border-radius: 8px;
+      background: #000000;
+      border: 1px solid var(--border);
+      border-radius: var(--ui-radius);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -185,6 +282,7 @@
       overflow: hidden;
       position: relative;
       aspect-ratio: 16/9;
+      box-shadow: 0 12px 36px var(--shadow);
     }
 
     .viewport img,
@@ -199,15 +297,18 @@
 
     .viewport-label {
       position: absolute;
-      top: 12px;
-      left: 12px;
-      background: rgba(0,0,0,0.8);
-      padding: 4px 8px;
-      font-size: 11px;
+      top: 14px;
+      left: 14px;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(4px);
+      color: #fff;
+      padding: 4px 10px;
+      font-size: 10px;
       border-radius: 4px;
-      font-weight: bold;
+      font-weight: 700;
       z-index: 10;
-      letter-spacing: 0.5px;
+      letter-spacing: 1px;
+      border: 1px solid rgba(255,255,255,0.1);
     }
 
     #audience-view {
@@ -276,81 +377,93 @@
     .scene-list {
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      max-height: 150px;
+      gap: 6px;
+      max-height: 160px;
       overflow-y: auto;
+      padding-right: 2px;
     }
 
     .scene-item {
-      border: 1px solid rgba(255,255,255,0.10);
-      background: rgba(0,0,0,0.20);
+      border: 1px solid var(--border);
+      background: var(--input-bg);
       border-radius: 6px;
-      padding: 10px;
+      padding: 8px 12px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       gap: 10px;
     }
-
+    .scene-item:hover {
+      border-color: var(--text-muted);
+    }
     .scene-item.active {
-      border-color: rgba(0,122,204,0.9);
-      box-shadow: 0 0 0 2px rgba(0,122,204,0.15);
+      border-color: var(--accent-blue);
+      background: rgba(0, 132, 255, 0.08);
+    }
+
+    body.light-mode .scene-item.active {
+      background: rgba(0, 132, 255, 0.05);
     }
 
     .scene-item .name {
       font-weight: 600;
-      color: #eee;
+      color: var(--text);
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       max-width: 170px;
+      font-size: 13px;
     }
 
     .mini-btn {
-      background: rgba(255,255,255,0.10);
-      border: 1px solid rgba(255,255,255,0.15);
-      color: #ddd;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
       padding: 6px 10px;
-      border-radius: 6px;
-      font-weight: bold;
+      border-radius: 4px;
+      font-weight: 600;
       cursor: pointer;
+      font-size: 12px;
+    }
+    .mini-btn:hover {
+      background: var(--border);
     }
 
     .sync-status-banner {
-      padding: 10px;
-      background: rgba(220, 53, 69, 0.2);
+      padding: 12px;
+      background: rgba(230, 57, 70, 0.1);
       border: 1px solid var(--accent-red);
       border-radius: 6px;
       margin-bottom: 5px;
       font-size: 13px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
-
     .sync-status-banner.connected {
-      background: rgba(40, 167, 69, 0.2);
+      background: rgba(36, 180, 81, 0.1);
       border-color: var(--accent-green);
     }
 
     .file-meta-tag {
-      font-size: 10px;
-      color: #999;
+      font-size: 9px;
+      color: #bbb;
       word-break: break-all;
-      margin-top: 2px;
-      background: rgba(0,0,0,0.4);
-      padding: 3px;
+      margin-top: 4px;
+      background: rgba(0,0,0,0.5);
+      padding: 4px;
       border-radius: 4px;
-      max-height: 35px;
+      max-height: 38px;
       overflow-y: auto;
     }
 
     .pdf-toolbar, .video-toolbar {
       position: absolute;
-      left: 12px;
-      bottom: 12px;
-      background: rgba(0,0,0,0.85);
+      left: 14px;
+      bottom: 14px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(6px);
       border: 1px solid rgba(255,255,255,0.15);
       padding: 8px 12px;
       border-radius: 6px;
@@ -358,41 +471,52 @@
       display: flex;
       align-items: center;
       gap: 10px;
-      color: #ddd;
+      color: #fff;
       font-size: 12px;
     }
 
     .status-text {
-      color: #aaa;
+      color: var(--text-muted);
       font-size: 13px;
-      line-height: 1.3;
+      line-height: 1.4;
+      font-weight: 500;
     }
 
     .ftb-btn {
-      background-color: #333;
-      color: #fff;
-      border: 1px solid #555;
-    }
-    .ftb-btn.active {
-      background-color: var(--accent-red);
-      border-color: #ff5c6c;
-    }
-
-    .ftg-btn {
-      background-color: #2a2a35;
+      background-color: #2b2b36;
       color: #fff;
       border: 1px solid var(--border);
     }
+    body.light-mode .ftb-btn {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
+    .ftb-btn.active {
+      background-color: var(--accent-red) !important;
+      border-color: var(--accent-red);
+      color: white;
+    }
+
+    .ftg-btn {
+      background-color: #2b2b36;
+      color: #fff;
+      border: 1px solid var(--border);
+    }
+    body.light-mode .ftg-btn {
+      background-color: #e2e8f0;
+      color: #334155;
+    }
     .ftg-btn.active {
-      background-color: var(--accent-purple);
-      border-color: #9e66ff;
+      background-color: var(--accent-purple) !important;
+      border-color: var(--accent-purple);
+      color: white;
     }
 
     .modal-overlay {
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.75);
-      backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
       z-index: 1000;
       display: flex;
       align-items: center;
@@ -411,8 +535,8 @@
       border-radius: 12px;
       width: 90%;
       max-width: 440px;
-      padding: 20px;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
       transform: scale(0.95);
       transition: transform 0.2s ease-out;
     }
@@ -420,19 +544,19 @@
       transform: scale(1);
     }
     .modal-title {
-      font-size: 16px;
-      font-weight: bold;
+      font-size: 15px;
+      font-weight: 700;
       margin-top: 0;
       margin-bottom: 12px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: #fff;
+      letter-spacing: 0.8px;
+      color: var(--text);
     }
     .modal-body {
       font-size: 14px;
-      color: #ccc;
-      margin-bottom: 20px;
-      line-height: 1.4;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.5;
     }
     .modal-footer {
       display: flex;
@@ -455,6 +579,15 @@
     <header>
       <h2>JIL TAGUIG PRESENTER</h2>
       <div class="row" style="flex-wrap: nowrap;">
+        <!-- Theme Toggle Switch Inserted here -->
+        <div class="theme-switch-wrapper">
+          <span style="font-size: 12px; font-weight: 600; color: var(--text-muted);">🌓 Mode</span>
+          <label class="theme-switch" for="checkbox">
+            <input type="checkbox" id="checkbox" onchange="toggleThemeLayout(this)" />
+            <div class="slider"></div>
+          </label>
+        </div>
+        
         <select id="header-bg-selector" style="margin-bottom: 0; width: 180px; height: 38px;" onchange="changeBackgroundTarget(this.value)">
           <option value="">-- Choose Background Image --</option>
         </select>
@@ -494,6 +627,15 @@
             accept="image/*,video/*,application/pdf"
             onchange="handleUpload(event)"
           />
+          <!-- iLovePDF Converter Quick-Link Button -->
+          <button 
+            type="button" 
+            style="width: 100%; background-color: #e5322b; margin-bottom: 12px; color: #fff;" 
+            onclick="window.open('https://www.ilovepdf.com/powerpoint_to_pdf', '_blank')"
+          >
+            📊 Convert PPTX to PDF via iLovePDF
+          </button>
+          
           <div class="deck-list" id="deck-container"></div>
         </div>
 
@@ -575,6 +717,17 @@
     let modalResolve = null;
 
     let discoveredWorkspaceImages = {};
+
+    // Custom helper UI routine to handle local configuration preference storage
+    function toggleThemeLayout(checkboxEl) {
+      if (checkboxEl.checked) {
+        document.body.classList.add('light-mode');
+        localStorage.setItem('mps_theme_mode', 'light');
+      } else {
+        document.body.classList.remove('light-mode');
+        localStorage.setItem('mps_theme_mode', 'dark');
+      }
+    }
 
     function showModal(title, text, showInput = false, defaultInputValue = '') {
       return new Promise((resolve) => {
@@ -1602,6 +1755,14 @@
     });
 
     window.addEventListener('DOMContentLoaded', async () => {
+      // Check for user theme preferences on load
+      const savedTheme = localStorage.getItem('mps_theme_mode');
+      const toggleCheckbox = document.getElementById('checkbox');
+      if (savedTheme === 'light') {
+        document.body.classList.add('light-mode');
+        if (toggleCheckbox) toggleCheckbox.checked = true;
+      }
+
       const params = new URLSearchParams(window.location.search);
       if (params.get('display') === 'true') {
         document.body.classList.add('live-window-mode');
