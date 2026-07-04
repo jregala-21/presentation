@@ -540,6 +540,99 @@
       transform: scale(0.95);
       transition: transform 0.2s ease-out;
     }
+    .preview-modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.78);
+      backdrop-filter: blur(8px);
+      z-index: 1100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease-out;
+    }
+    .preview-modal-overlay.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .preview-modal-box {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: min(1120px, 100%);
+      max-height: 88vh;
+      overflow: auto;
+      padding: 24px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+      transform: scale(0.95);
+      transition: transform 0.2s ease-out;
+    }
+    .preview-modal-overlay.open .preview-modal-box {
+      transform: scale(1);
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 18px;
+      margin-top: 14px;
+    }
+    .preview-slide-card {
+      background: var(--bg-dark);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      cursor: pointer;
+      padding: 0;
+      text-align: left;
+      color: var(--text);
+      box-shadow: 0 6px 16px rgba(0,0,0,0.18);
+    }
+    .preview-slide-card:hover {
+      border-color: var(--accent-blue);
+      transform: translateY(-2px);
+    }
+    .preview-slide-card.active {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 2px rgba(0, 132, 255, 0.25);
+    }
+    .preview-slide-thumb {
+      aspect-ratio: 16 / 9;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      color: #ddd;
+      font-size: 13px;
+      font-weight: 700;
+      position: relative;
+      overflow: hidden;
+    }
+    .preview-slide-thumb img,
+    .preview-slide-thumb canvas {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+    .preview-slide-meta {
+      padding: 12px 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+    .preview-slide-meta strong {
+      color: var(--text);
+      font-size: 13px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .modal-overlay.open .modal-box {
       transform: scale(1);
     }
@@ -665,12 +758,13 @@
             <div id="preview-placeholder" style="color:#555;">No Media Queued</div>
           </div>
           
-          <div class="row" style="margin-top: 15px;">
+          <div class="row" style="margin-top: 15px; flex-wrap: wrap;">
             <select id="transition-type-select" style="margin-bottom: 0; width: 140px; height: 46px; font-size: 15px; font-weight: bold;">
               <option value="fade" selected>✨ Fade</option>
               <option value="cut">⚡ Cut</option>
             </select>
             <button class="action-btn" onclick="fireLive()" style="margin-top:0; height:46px;">Go Live (Enter)</button>
+            <button style="height:46px; background-color: var(--accent-purple);" onclick="openSlidePreviewModal()">📋 Preview Slides</button>
           </div>
         </div>
       </div>
@@ -690,6 +784,17 @@
         <button id="modal-cancel-btn" style="background: #444;" onclick="closeModal(false)">Cancel</button>
         <button id="modal-confirm-btn" style="background: var(--accent-blue);" onclick="closeModal(true)">Confirm</button>
       </div>
+    </div>
+  </div>
+
+  <div id="slide-preview-modal" class="preview-modal-overlay" onclick="closeSlidePreviewModal()">
+    <div class="preview-modal-box" onclick="event.stopPropagation()">
+      <div class="row" style="justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <div class="modal-title" style="margin: 0;">Slide Preview</div>
+        <button style="background: #444;" onclick="closeSlidePreviewModal()">Close</button>
+      </div>
+      <div class="modal-body" style="margin-bottom: 0;">Select any slide to send it live to the presentation.</div>
+      <div id="slide-preview-grid" class="preview-grid"></div>
     </div>
   </div>
 
@@ -1184,6 +1289,106 @@
       persistScenes();
       renderSceneDeckUI();
       setStagedFromSceneIndex(scene.items.length - 1);
+    }
+
+    async function populateSlidePreviewGrid() {
+      const grid = document.getElementById('slide-preview-grid');
+      if (!grid) return;
+
+      const deck = getActiveDeck();
+      grid.innerHTML = '';
+
+      if (!deck.length) {
+        grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--text-muted);">No slides yet in this scene.</div>';
+        return;
+      }
+
+      if (staged.type === 'pdf' && staged.value) {
+        try {
+          const doc = await pdfjsLib.getDocument(staged.value).promise;
+          for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            card.className = 'preview-slide-card' + (pageNum === staged.page ? ' active' : '');
+
+            const thumb = document.createElement('div');
+            thumb.className = 'preview-slide-thumb';
+
+            const page = await doc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 0.45 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            thumb.appendChild(canvas);
+
+            const meta = document.createElement('div');
+            meta.className = 'preview-slide-meta';
+            meta.innerHTML = `<strong>Slide ${pageNum}</strong><span>PDF page ${pageNum}/${doc.numPages}</span>`;
+
+            card.appendChild(thumb);
+            card.appendChild(meta);
+            card.onclick = () => {
+              staged.page = pageNum;
+              setSlideStatus();
+              renderPreview();
+              closeSlidePreviewModal();
+            };
+            grid.appendChild(card);
+          }
+          return;
+        } catch (e) {
+          grid.innerHTML = '<div style="grid-column: 1 / -1; color: var(--accent-red);">Unable to load PDF preview pages.</div>';
+          return;
+        }
+      }
+
+      for (const [index, item] of deck.entries()) {
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'preview-slide-card' + ((index === staged.sceneItemIndex && staged.type !== 'none') ? ' active' : '');
+
+        const thumb = document.createElement('div');
+        thumb.className = 'preview-slide-thumb';
+
+        if (item.type === 'image' && item.value) {
+          thumb.innerHTML = `<img src="${item.value}" alt="" />`;
+        } else if (item.type === 'video' && item.value) {
+          thumb.innerHTML = '<div>🎬 Video</div>';
+        } else if (item.type === 'url' && item.value) {
+          thumb.innerHTML = '<div>🖼️ Canva</div>';
+        } else if (item.type === 'pdf' && item.value) {
+          thumb.innerHTML = '<div>📄 PDF</div>';
+        } else {
+          thumb.innerHTML = '<div>🗂️ Asset</div>';
+        }
+
+        const meta = document.createElement('div');
+        meta.className = 'preview-slide-meta';
+        meta.innerHTML = `<strong>${(item.name || `Slide ${index + 1}`).replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong><span>${item.type.toUpperCase()} • ${index + 1}/${deck.length}</span>`;
+
+        card.appendChild(thumb);
+        card.appendChild(meta);
+        card.onclick = () => {
+          setStagedFromSceneIndex(index);
+          closeSlidePreviewModal();
+        };
+        grid.appendChild(card);
+      }
+    }
+
+    function openSlidePreviewModal() {
+      const modal = document.getElementById('slide-preview-modal');
+      if (!modal) return;
+      populateSlidePreviewGrid();
+      modal.classList.add('open');
+    }
+
+    function closeSlidePreviewModal() {
+      const modal = document.getElementById('slide-preview-modal');
+      if (!modal) return;
+      modal.classList.remove('open');
     }
 
     function renderSceneDeckUI() {
