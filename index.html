@@ -420,11 +420,111 @@
       gap: 8px;
     }
 
+    .bible-suggestions {
+      display: none;
+      max-height: 220px;
+      overflow-y: auto;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-top: -4px;
+      padding: 4px;
+      box-shadow: 0 8px 18px var(--shadow);
+    }
+
+    .bible-suggestion-item {
+      width: 100%;
+      background: transparent;
+      border: 0;
+      color: var(--text);
+      justify-content: flex-start;
+      text-align: left;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+
+    .bible-suggestion-item:hover,
+    .bible-suggestion-item.active {
+      background: rgba(0, 132, 255, 0.16);
+    }
+
     .bible-search-row {
       display: flex;
       gap: 8px;
       align-items: center;
       flex-wrap: wrap;
+    }
+
+    .bible-file-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .bible-file-row input[type="file"] {
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .bible-file-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1 1 340px;
+      min-width: 260px;
+    }
+
+    .bible-tool-btn.folder {
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+
+
+    .bible-controls {
+      background: linear-gradient(180deg, rgba(255,255,255,0.025), rgba(0,0,0,0.06));
+      border-radius: 12px;
+    }
+
+    .bible-tool-row {
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+
+    .bible-tool-btn {
+      min-height: 38px;
+      white-space: nowrap;
+      border-radius: 8px;
+    }
+
+    .bible-tool-btn.accept { background: var(--accent-green); }
+    .bible-tool-btn.background { background: var(--accent-purple); }
+    .bible-tool-btn.reset { background: #3a3a46; border: 1px solid var(--border); }
+    .bible-tool-btn.reset:hover { background: var(--accent-red); }
+
+    .bible-background-status {
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.35;
+      background: rgba(0, 132, 255, 0.08);
+      border: 1px solid rgba(0, 132, 255, 0.18);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-top: 8px;
+    }
+
+    .bible-suggestions {
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .bible-suggestion-item {
+      min-height: 36px;
     }
 
     @media (max-width: 900px) {
@@ -794,7 +894,209 @@
       justify-content: flex-end;
       gap: 10px;
     }
-  </style>
+
+    /* Bible presentation fixes: always fit text and support background image */
+    .bible-card {
+      position: relative;
+      overflow: hidden;
+      gap: clamp(8px, 1.6vh, 18px);
+      padding: clamp(22px, 5.2vh, 54px) clamp(28px, 6vw, 86px);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+    }
+
+    .bible-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.50), rgba(0,0,0,0.76)), radial-gradient(circle at 20% 10%, rgba(0, 132, 255, 0.28), transparent 36%);
+      z-index: 0;
+    }
+
+    .bible-card > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .bible-text {
+      width: 100%;
+      max-width: 100%;
+      overflow-wrap: break-word;
+      word-break: normal;
+      hyphens: auto;
+      line-height: 1.14;
+      margin: 0;
+    }
+
+    .bible-reference,
+    .bible-category-tag {
+      flex: 0 0 auto;
+      max-width: 100%;
+      overflow-wrap: break-word;
+    }
+
+
+    /* Final typography patch: no hyphenated words and no language tag on Bible slides */
+    .bible-card {
+      justify-content: center;
+      align-items: center;
+      min-width: 0;
+      min-height: 0;
+    }
+    .bible-text {
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+      hyphens: none !important;
+      -webkit-hyphens: none !important;
+      text-wrap: balance;
+      white-space: normal;
+    }
+    .bible-reference {
+      overflow-wrap: normal !important;
+      word-break: normal !important;
+      hyphens: none !important;
+      -webkit-hyphens: none !important;
+      white-space: normal;
+    }
+
+
+    /* Canva safe view fixes */
+    .viewport.canva-live-content-mode .viewport-label {
+      display: none;
+    }
+
+    .viewport.canva-content-mode {
+      overflow: hidden;
+      background: #000;
+    }
+
+    .viewport.canva-content-mode iframe.canva-fit-frame,
+    .canva-audience-wrapper iframe.canva-fit-frame {
+      position: absolute;
+      width: 104%;
+      height: 104%;
+      left: -2%;
+      top: -2%;
+      transform: scale(0.962);
+      transform-origin: center center;
+      border: 0;
+      background: #000;
+    }
+
+
+
+    .dissolve-old-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 45;
+      opacity: 1;
+      pointer-events: none;
+      transition: opacity 0.7s ease-in-out;
+      background: #000;
+    }
+
+    .dissolve-old-layer.dissolve-out {
+      opacity: 0;
+    }
+
+    .dissolve-old-layer > * {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+  
+
+    /* Bible live navigation controls */
+    .bible-live-nav {
+      position: absolute;
+      inset: 0;
+      z-index: 45;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+
+    .bible-live-nav button {
+      pointer-events: auto;
+      width: 46px;
+      height: 46px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.58);
+      border: 1px solid rgba(255, 255, 255, 0.22);
+      color: #fff;
+      font-size: 24px;
+      line-height: 1;
+      padding: 0;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.38);
+      backdrop-filter: blur(8px);
+    }
+
+    .bible-live-nav button:hover {
+      background: rgba(0, 132, 255, 0.75);
+      transform: scale(1.04);
+    }
+
+    .bible-live-nav button:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+      transform: none;
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .bible-live-nav-label {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.55);
+      color: rgba(255, 255, 255, 0.86);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      backdrop-filter: blur(8px);
+    }
+
+
+    /* Compact Bible Library messages: use one shared line instead of stacked status boxes. */
+    .bible-library-flash {
+      display: none;
+      margin-top: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid rgba(0, 132, 255, 0.22);
+      background: rgba(0, 132, 255, 0.08);
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.25;
+      min-height: 32px;
+      align-items: center;
+    }
+
+    .bible-library-flash.show {
+      display: flex;
+    }
+
+    .bible-library-flash.error {
+      border-color: rgba(230, 57, 70, 0.55);
+      background: rgba(230, 57, 70, 0.10);
+      color: var(--accent-red);
+    }
+
+    .bible-library-hidden-status {
+      display: none !important;
+    }
+
+</style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script>
@@ -913,6 +1215,7 @@
           <div class="row" style="margin-top: 15px; flex-wrap: wrap;">
             <select id="transition-type-select" style="margin-bottom: 0; width: 140px; height: 46px; font-size: 15px; font-weight: bold;">
               <option value="fade" selected>✨ Fade</option>
+              <option value="dissolve">🌫️ Dissolve</option>
               <option value="cut">⚡ Cut</option>
             </select>
             <button class="action-btn" onclick="fireLive()" style="margin-top:0; height:46px;">Go Live (Enter)</button>
@@ -922,13 +1225,28 @@
           <div class="section-box" style="margin-top: 16px;">
             <h3>Bible Library</h3>
             <div class="bible-controls">
-              <input type="file" id="bible-file-input" accept=".xml,application/xml,text/xml" multiple onchange="importBibleXml()" />
+              <div class="bible-file-row bible-tool-row">
+                <div class="bible-file-picker-wrap">
+                  <input type="file" id="bible-file-uploader" accept=".sql,.json,.xml,.txt,.csv,application/json,text/json,text/xml,text/csv,text/plain" multiple style="margin-bottom: 0; flex: 1; min-width: 180px;" onchange="updateBiblePendingFileStatus()">
+                  <input type="file" id="bible-folder-uploader" accept=".sql,.json,.xml,.txt,.csv,application/json,text/json,text/xml,text/csv,text/plain" multiple webkitdirectory directory style="display:none;" onchange="updateBiblePendingFileStatus()">
+                  <button type="button" class="bible-tool-btn folder" onclick="chooseBibleFolderFiles()">📁 Choose Folder</button>
+                </div>
+                <button type="button" class="bible-tool-btn accept" onclick="importBibleFiles()">✅ Accept</button>
+                <button type="button" class="bible-tool-btn background" onclick="chooseBibleBackgroundImage()">🖼️ Background</button>
+                <button type="button" class="bible-tool-btn reset" onclick="resetBibleLibraries()">↺ Reset</button>
+                <input type="file" id="bible-background-uploader" accept="image/*" style="display:none;" onchange="handleBibleBackgroundFile(event)">
+              </div>
+              <div id="bible-pending-file-status" class="bible-background-status bible-library-hidden-status"></div>
+              <div id="bible-background-status" class="bible-background-status bible-library-hidden-status"></div>
+              <div id="bible-firebase-status" class="bible-background-status bible-library-hidden-status"></div>
+              <div id="bible-library-flash" class="bible-library-flash" aria-live="polite"></div>
               <div class="bible-search-row">
                 <select id="bible-language-select" style="margin-bottom: 0; flex: 1; min-width: 180px;" onchange="setActiveBibleLibrary(this.value)"></select>
-                <input id="bible-search-input" type="text" placeholder="Genesis:1:1" style="margin-bottom:0; flex: 1; min-width: 220px;" />
+                <input id="bible-search-input" type="text" placeholder="Search book, chapter, verse, or words" autocomplete="off" style="margin-bottom:0; flex: 1; min-width: 220px;" oninput="updateBibleSuggestions()" onfocus="updateBibleSuggestions()" onkeydown="handleBibleSearchKeydown(event)" />
                 <button type="button" onclick="searchBibleVerse()">Search</button>
               </div>
-              <div id="bible-search-result" class="status-text" style="margin-top: 4px;">Import a Bible XML file to begin searching.</div>
+              <div id="bible-suggestions" class="bible-suggestions"></div>
+              <div id="bible-search-result" class="status-text" style="margin-top: 4px;">Choose a Bible file, click Accept, then type freely to see suggestions.</div>
               <div class="bible-actions" style="margin-top: 8px;">
                 <button type="button" onclick="previewBibleSearchResult()">Preview Verse</button>
                 <button type="button" style="background: var(--accent-green);" onclick="addBibleSearchResultToScene()">Add to Scene</button>
@@ -997,6 +1315,33 @@
     let activeBibleKey = '';
     let currentBibleSearchResult = null;
 
+    let bibleLibraryFlashTimer = null;
+
+    function showBibleLibraryFlash(message, isError = false, autoHide = true) {
+      const el = document.getElementById('bible-library-flash');
+      if (!el) return;
+      if (bibleLibraryFlashTimer) {
+        clearTimeout(bibleLibraryFlashTimer);
+        bibleLibraryFlashTimer = null;
+      }
+      const text = String(message || '').trim();
+      if (!text) {
+        el.textContent = '';
+        el.classList.remove('show', 'error');
+        return;
+      }
+      el.textContent = text;
+      el.classList.toggle('error', Boolean(isError));
+      el.classList.add('show');
+      if (autoHide) {
+        bibleLibraryFlashTimer = setTimeout(() => {
+          el.classList.remove('show', 'error');
+          el.textContent = '';
+          bibleLibraryFlashTimer = null;
+        }, isError ? 7000 : 4500);
+      }
+    }
+
     // Custom helper UI routine to handle local configuration preference storage
     function toggleThemeLayout(checkboxEl) {
       if (checkboxEl.checked) {
@@ -1006,6 +1351,113 @@
         document.body.classList.remove('light-mode');
         localStorage.setItem('mps_theme_mode', 'dark');
       }
+    }
+
+    function parseBibleXmlContent(xmlText, label) {
+      const entries = [];
+      try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        
+        // Scan all DOM elements linearly to identify books, chapters, and verses
+        let nodes = xmlDoc.getElementsByTagName('*');
+        let currentBook = '';
+        let currentChapter = '1';
+
+        for (let i = 0; i < nodes.length; i++) {
+          const node = nodes[i];
+          const tag = node.tagName.toLowerCase();
+          
+          const getAttr = (names) => {
+            for (let name of names) {
+              let attr = node.getAttribute(name);
+              if (attr) return attr;
+            }
+            return '';
+          };
+
+          if (['book', 'biblebook'].includes(tag)) {
+            currentBook = getAttr(['bname', 'name', 'id']) || currentBook;
+          }
+          if (['chapter', 'chap'].includes(tag)) {
+            currentChapter = getAttr(['cnumber', 'chapter', 'ch', 'number', 'n', 'value']) || currentChapter;
+          }
+
+          const isVerseNode = ['verse', 'v', 'seg', 'content', 'text'].includes(tag) || /verse/i.test(tag);
+          const verseValue = getAttr(['vnumber', 'verse', 'v', 'number', 'n', 'id']);
+          const textContent = (node.textContent || '').replace(/\s+/g, ' ').trim();
+
+          if (isVerseNode && verseValue && textContent) {
+            const cNum = parseInt(currentChapter.replace(/[^0-9]/g, ''), 10) || 1;
+            const vNum = parseInt(verseValue.replace(/[^0-9]/g, ''), 10) || 1;
+            const bName = currentBook || 'Bible';
+            entries.push({
+              book: bName.trim(),
+              chapter: cNum,
+              verse: vNum,
+              text: textContent,
+              reference: `${bName.trim()} ${cNum}:${vNum}`,
+              sourceLabel: label
+            });
+          }
+        }
+
+        // Direct fallback loop if standard nested tag hierarchies aren't found
+        if (entries.length === 0) {
+          let flatVerses = xmlDoc.getElementsByTagName('verse');
+          if (!flatVerses.length) flatVerses = xmlDoc.getElementsByTagName('v');
+          for (let i = 0; i < flatVerses.length; i++) {
+            const vNode = flatVerses[i];
+            const b = vNode.getAttribute('book') || vNode.getAttribute('b') || 'Bible';
+            const c = parseInt(vNode.getAttribute('chapter') || vNode.getAttribute('c') || 1, 10);
+            const v = parseInt(vNode.getAttribute('verse') || vNode.getAttribute('v') || (i + 1), 10);
+            entries.push({ book: b, chapter: c, verse: v, text: vNode.textContent.trim(), reference: `${b} ${c}:${v}`, sourceLabel: label });
+          }
+        }
+      } catch (e) {
+        console.error("XML Parse Error:", e);
+      }
+      return entries;
+    }
+
+    function parseBibleJsonContent(jsonText, label) {
+      const entries = [];
+      try {
+        const obj = JSON.parse(jsonText);
+        
+        // Format 1: Direct Array of Objects [{"book":"Gen", "chapter":1, "verse":1, "text":"..."}]
+        if (Array.isArray(obj)) {
+          obj.forEach((item, idx) => {
+            const b = item.book || item.b || "Bible";
+            const c = parseInt(item.chapter || item.c || 1, 10);
+            const v = parseInt(item.verse || item.v || (idx + 1), 10);
+            const t = item.text || item.t || "";
+            entries.push({ book: b, chapter: c, verse: v, text: t, reference: `${b} ${c}:${v}`, sourceLabel: label });
+          });
+        } 
+        // Format 2: Tree layout structured by Book -> Chapter -> Verse
+        else {
+          for (const bookKey in obj) {
+            if (typeof obj[bookKey] === 'object') {
+              for (const chKey in obj[bookKey]) {
+                const chObj = obj[bookKey][chKey];
+                if (Array.isArray(chObj)) {
+                  chObj.forEach((vText, vIdx) => {
+                    entries.push({ book: bookKey, chapter: parseInt(chKey, 10), verse: vIdx + 1, text: vText, reference: `${bookKey} ${chKey}:${vIdx + 1}`, sourceLabel: label });
+                  });
+                } else if (typeof chObj === 'object') {
+                  for (const vKey in chObj) {
+                    entries.push({ book: bookKey, chapter: parseInt(chKey, 10), verse: parseInt(vKey, 10), text: chObj[vKey], reference: `${bookKey} ${chKey}:${vKey}`, sourceLabel: label });
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+      }
+      return entries;
     }
 
     function showModal(title, text, showInput = false, defaultInputValue = '') {
@@ -1029,6 +1481,105 @@
         
         document.getElementById('studio-modal').classList.add('open');
       });
+    }
+
+    function parseXmlBible(xmlText, label) {
+      const entries = [];
+      try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, "text/xml");
+        
+        // Attempt standard book node lookups
+        let books = xmlDoc.getElementsByTagName("biblebook");
+        if (!books.length) books = xmlDoc.getElementsByTagName("book");
+        if (!books.length) books = xmlDoc.getElementsByTagName("BIBLEBOOK");
+
+        if (books.length > 0) {
+          for (let b = 0; b < books.length; b++) {
+            const bNode = books[b];
+            const bName = bNode.getAttribute("bname") || bNode.getAttribute("name") || bNode.getAttribute("id") || "Unknown";
+            
+            let chapters = bNode.getElementsByTagName("chapter");
+            for (let c = 0; c < chapters.length; c++) {
+              const cNode = chapters[c];
+              const cNum = parseInt(cNode.getAttribute("cnumber") || cNode.getAttribute("name") || (c + 1), 10);
+              
+              let verses = cNode.getElementsByTagName("verse");
+              if (!verses.length) verses = cNode.getElementsByTagName("v");
+              
+              for (let v = 0; v < verses.length; v++) {
+                const vNode = verses[v];
+                const vNum = parseInt(vNode.getAttribute("vnumber") || vNode.getAttribute("n") || (v + 1), 10);
+                const txt = vNode.textContent.trim();
+                if (txt) {
+                  entries.push({
+                    book: bName,
+                    chapter: cNum,
+                    verse: vNum,
+                    text: txt,
+                    reference: `${bName} ${cNum}:${vNum}`,
+                    sourceLabel: label
+                  });
+                }
+              }
+            }
+          }
+        } else {
+          // Fallback flatten parse for direct <verse book="Gen" chapter="1" verse="1"> styles
+          let verses = xmlDoc.getElementsByTagName("verse");
+          if (!verses.length) verses = xmlDoc.getElementsByTagName("v");
+          for (let i = 0; i < verses.length; i++) {
+            const node = verses[i];
+            const b = node.getAttribute("book") || "Bible";
+            const c = parseInt(node.getAttribute("chapter") || 1, 10);
+            const v = parseInt(node.getAttribute("verse") || (i + 1), 10);
+            entries.push({ book: b, chapter: c, verse: v, text: node.textContent.trim(), reference: `${b} ${c}:${v}`, sourceLabel: label });
+          }
+        }
+      } catch (e) {
+        console.error("XML Parse Error:", e);
+      }
+      return entries;
+    }
+
+    function parseJsonBible(jsonText, label) {
+      const entries = [];
+      try {
+        const obj = JSON.parse(jsonText);
+        
+        // Format 1: Plain Array of Objects [{"book":"Gen", "chapter":1, "verse":1, "text":"..."}]
+        if (Array.isArray(obj)) {
+          obj.forEach((item, idx) => {
+            const b = item.book || item.b || "Bible";
+            const c = parseInt(item.chapter || item.c || 1, 10);
+            const v = parseInt(item.verse || item.v || (idx + 1), 10);
+            const t = item.text || item.t || "";
+            entries.push({ book: b, chapter: c, verse: v, text: t, reference: `${b} ${c}:${v}`, sourceLabel: label });
+          });
+        } 
+        // Format 2: Tree Dictionary Layout {"Genesis": {"1": {"1": "Text"}}}
+        else {
+          for (const bookKey in obj) {
+            if (typeof obj[bookKey] === 'object') {
+              for (const chKey in obj[bookKey]) {
+                const chObj = obj[bookKey][chKey];
+                if (Array.isArray(chObj)) {
+                  chObj.forEach((vText, vIdx) => {
+                    entries.push({ book: bookKey, chapter: parseInt(chKey, 10), verse: vIdx + 1, text: vText, reference: `${bookKey} ${chKey}:${vIdx + 1}`, sourceLabel: label });
+                  });
+                } else if (typeof chObj === 'object') {
+                  for (const vKey in chObj) {
+                    entries.push({ book: bookKey, chapter: parseInt(chKey, 10), verse: parseInt(vKey, 10), text: chObj[vKey], reference: `${bookKey} ${chKey}:${vKey}`, sourceLabel: label });
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("JSON Parse Error:", e);
+      }
+      return entries;
     }
 
     function closeModal(isConfirmed) {
@@ -1206,6 +1757,17 @@
       let matchedAny = false;
       discoveredWorkspaceImages = {};
 
+      const collectBibleFiles = async (handle, collected = []) => {
+        for await (const entry of handle.values()) {
+          if (entry.kind === 'file' && isSupportedBibleFile(entry.name)) {
+            collected.push(entry);
+          } else if (entry.kind === 'directory') {
+            await collectBibleFiles(entry, collected);
+          }
+        }
+        return collected;
+      };
+
       try {
         for await (const entry of folderHandle.values()) {
           if (entry.kind === 'file') {
@@ -1219,7 +1781,16 @@
         }
       } catch (err) {}
 
+      try {
+        const bibleFiles = await collectBibleFiles(folderHandle);
+        for (const entry of bibleFiles) {
+          const fileData = await entry.getFile();
+          await importBibleFileObject(fileData);
+        }
+      } catch (err) {}
+
       populateBackgroundSelector();
+      populateBibleLibrarySelector();
 
       for (let scene of scenes) {
         for (let item of scene.items) {
@@ -1242,6 +1813,8 @@
           setStagedFromSceneIndex(staged.sceneItemIndex);
         }
       }
+
+      renderBibleSearchResult();
 
       const savedBg = localStorage.getItem(LS_BG_TARGET);
       if (savedBg && discoveredWorkspaceImages[savedBg]) {
@@ -1777,6 +2350,22 @@
       return `${String(book || '').trim()} ${chapter}:${verse}`;
     }
 
+    function isSupportedBibleFile(fileName) {
+      const lowerName = String(fileName || '').toLowerCase();
+      // Change this return statement to include .xml and .json extensions
+      return lowerName.endsWith('.xml') || lowerName.endsWith('.json') || lowerName.endsWith('.sql') || lowerName.endsWith('.pdf');
+    }
+
+    function makeBibleLibraryKey(fileName) {
+      const baseName = String(fileName || '')
+        .replace(/\.(xml|json|sql|pdf)$/i, '')
+        .trim()
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '') || 'imported_bible';
+      const key = baseName.toLowerCase();
+      return bibleLibraries[key] ? null : key;
+    }
+
     function parseBibleXml(xmlText, sourceLabel) {
       const parser = new DOMParser();
       const doc = parser.parseFromString(xmlText, 'application/xml');
@@ -1836,6 +2425,151 @@
 
       walk(doc.documentElement, '', '');
       return entries;
+    }
+
+    function parseBibleJson(jsonText, sourceLabel) {
+      const entries = [];
+      const seen = new Set();
+
+      const addEntry = (book, chapter, verse, text) => {
+        const chapterNum = parseInt(String(chapter).replace(/[^0-9]/g, ''), 10);
+        const verseNum = parseInt(String(verse).replace(/[^0-9]/g, ''), 10);
+        if (!book || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum)) return;
+        const normalizedKey = `${normalizeBibleBookName(book)}|${chapterNum}|${verseNum}`;
+        if (!seen.has(normalizedKey)) {
+          seen.add(normalizedKey);
+          entries.push({
+            book: String(book).trim(),
+            chapter: chapterNum,
+            verse: verseNum,
+            text: String(text || '').replace(/\s+/g, ' ').trim(),
+            reference: buildBibleReference(String(book).trim(), chapterNum, verseNum),
+            sourceLabel
+          });
+        }
+      };
+
+      const walk = (value) => {
+        if (!value || typeof value !== 'object') return;
+        if (Array.isArray(value)) {
+          value.forEach(walk);
+          return;
+        }
+
+        const bookValue = value.book || value.bibleBook || value.bookName || value.bookname || value.name || value.title;
+        const chapterValue = value.chapter || value.ch || value.chap || value.chapterNumber;
+        const verseValue = value.verse || value.verseNumber || value.verseNum || value.number || value.versenum;
+        const textValue = value.text || value.content || value.verseText || value.scripture || value.message || value.value;
+        if (bookValue && chapterValue !== undefined && verseValue !== undefined && textValue) {
+          addEntry(bookValue, chapterValue, verseValue, textValue);
+        }
+
+        Object.keys(value).forEach((key) => {
+          const normalizedKey = String(key).toLowerCase();
+          if (['book', 'biblebook', 'bookname', 'name', 'title', 'chapter', 'ch', 'chap', 'chapternumber', 'verse', 'versenumber', 'versenum', 'number', 'text', 'content', 'versetext', 'scripture', 'message', 'value'].includes(normalizedKey)) {
+            return;
+          }
+          walk(value[key]);
+        });
+      };
+
+      try {
+        walk(JSON.parse(jsonText));
+      } catch (e) {}
+      return entries;
+    }
+
+    function parseBibleSql(sqlText, sourceLabel) {
+      const entries = [];
+      const seen = new Set();
+
+      const addEntry = (book, chapter, verse, text) => {
+        const chapterNum = parseInt(String(chapter).replace(/[^0-9]/g, ''), 10);
+        const verseNum = parseInt(String(verse).replace(/[^0-9]/g, ''), 10);
+        if (!book || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum)) return;
+        const normalizedKey = `${normalizeBibleBookName(book)}|${chapterNum}|${verseNum}`;
+        if (!seen.has(normalizedKey)) {
+          seen.add(normalizedKey);
+          entries.push({
+            book: String(book).trim(),
+            chapter: chapterNum,
+            verse: verseNum,
+            text: String(text || '').replace(/\s+/g, ' ').trim(),
+            reference: buildBibleReference(String(book).trim(), chapterNum, verseNum),
+            sourceLabel
+          });
+        }
+      };
+
+      const sqlPattern = /(['"]?)([A-Za-z .,'-]+)\1\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*(['"])([\s\S]*?)\5/gi;
+      let match;
+      while ((match = sqlPattern.exec(sqlText))) {
+        addEntry(match[2], match[3], match[4], match[6]);
+      }
+      return entries;
+    }
+
+    function parseBiblePdfText(text, sourceLabel) {
+      const entries = [];
+      const seen = new Set();
+      const linePattern = /^([A-Za-z0-9 .,'-]+?)\s+([0-9]+):([0-9]+)\s*(.*)$/;
+
+      String(text || '')
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .forEach((line) => {
+          const match = line.match(linePattern);
+          if (!match) return;
+          const book = match[1].trim();
+          const chapterNum = parseInt(match[2], 10);
+          const verseNum = parseInt(match[3], 10);
+          const verseText = match[4].replace(/\s+/g, ' ').trim();
+          if (!book || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum) || !verseText) return;
+          const normalizedKey = `${normalizeBibleBookName(book)}|${chapterNum}|${verseNum}`;
+          if (!seen.has(normalizedKey)) {
+            seen.add(normalizedKey);
+            entries.push({
+              book,
+              chapter: chapterNum,
+              verse: verseNum,
+              text: verseText,
+              reference: buildBibleReference(book, chapterNum, verseNum),
+              sourceLabel
+            });
+          }
+        });
+
+      return entries;
+    }
+
+    async function parseBibleFile(file) {
+      const lowerName = String(file && file.name ? file.name : '').toLowerCase();
+      if (lowerName.endsWith('.xml')) {
+        const xmlText = await file.text();
+        return parseBibleXml(xmlText, file.name.replace(/\.xml$/i, ''));
+      }
+      if (lowerName.endsWith('.json')) {
+        const jsonText = await file.text();
+        return parseBibleJson(jsonText, file.name.replace(/\.json$/i, ''));
+      }
+      if (lowerName.endsWith('.sql')) {
+        const sqlText = await file.text();
+        return parseBibleSql(sqlText, file.name.replace(/\.sql$/i, ''));
+      }
+      if (lowerName.endsWith('.pdf') && typeof pdfjsLib !== 'undefined') {
+        const pdfData = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: pdfData }).promise;
+        let fullText = '';
+        for (let pageNum = 1; pageNum <= pdf.numPages; pageNum += 1) {
+          const page = await pdf.getPage(pageNum);
+          const content = await page.getTextContent();
+          const pageText = content.items.map((item) => item.str).join(' ');
+          fullText += `${fullText ? '\n' : ''}${pageText}`;
+        }
+        return parseBiblePdfText(fullText, file.name.replace(/\.pdf$/i, ''));
+      }
+      return [];
     }
 
     function openBibleDB() {
@@ -1910,33 +2644,51 @@
       renderBibleSearchResult();
     }
 
-    async function importBibleXml() {
+    async function importBibleFileObject(file) {
+      if (!file || !isSupportedBibleFile(file.name)) return { imported: false, reason: 'unsupported' };
+
+      const key = makeBibleLibraryKey(file.name);
+      if (!key) return { imported: false, reason: 'duplicate' };
+
+      try {
+        const entries = await parseBibleFile(file);
+        if (!entries.length) return { imported: false, reason: 'no readable verses' };
+
+        const label = file.name.replace(/\.(xml|json|sql|txt|csv|pdf)$/i, '');
+        bibleLibraries[key] = { key, label, entries };
+        await saveBibleLibraryToDB(key, bibleLibraries[key]);
+        if (!activeBibleKey) activeBibleKey = key;
+        return { imported: true, key, label };
+      } catch (error) {
+        return { imported: false, reason: error && error.message ? error.message : 'read failed' };
+      }
+    }
+
+    async function importBibleFiles() {
       const input = document.getElementById('bible-file-input');
       const files = input && input.files ? Array.from(input.files) : [];
       if (!files.length) return;
 
+      let importedCount = 0;
+      const skipped = [];
       for (const file of files) {
-        if (!file.name.toLowerCase().endsWith('.xml')) continue;
-
-        try {
-          const xmlText = await file.text();
-          const entries = parseBibleXml(xmlText, file.name.replace(/\.xml$/i, ''));
-          if (!entries.length) {
-            showModal('Bible Import Failed', `The selected XML file did not contain readable verse entries: ${file.name}`, false);
-            continue;
-          }
-
-          const key = file.name.replace(/\.xml$/i, '');
-          bibleLibraries[key] = { key, label: file.name.replace(/\.xml$/i, ''), entries };
-          await saveBibleLibraryToDB(key, bibleLibraries[key]);
-          activeBibleKey = activeBibleKey || key;
-        } catch (error) {
-          showModal('Bible Import Failed', `Could not read ${file.name}. Please choose a valid XML Bible file.`, false);
-        }
+        if (!isSupportedBibleFile(file.name)) continue;
+        const result = await importBibleFileObject(file);
+        if (result.imported) importedCount += 1;
+        else if (result.reason !== 'duplicate') skipped.push(`${file.name}: ${result.reason}`);
       }
 
       populateBibleLibrarySelector();
       renderBibleSearchResult();
+
+      if (importedCount) {
+        if (skipped.length) {
+          showModal('Bible Import Complete', `Imported ${importedCount} Bible file${importedCount === 1 ? '' : 's'}. Some items were skipped: ${skipped.slice(0, 3).join('; ')}`, false);
+        }
+      } else if (skipped.length) {
+        showModal('Bible Import Failed', `No readable Bible content was found. ${skipped[0]}`, false);
+      }
+
       if (input) input.value = '';
     }
 
@@ -1955,7 +2707,7 @@
       }
 
       if (!currentBibleSearchResult) {
-        resultBox.innerHTML = '<div style="color: var(--text-muted);">Search using the format Book:Chapter:Verse, such as Genesis:1:1.</div>';
+        resultBox.innerHTML = '<div style="color: var(--text-muted);">Search using the format Book:Chapter:Verse, such as Genesis 1:1.</div>';
         return;
       }
 
@@ -1979,7 +2731,7 @@
 
       if (!parsed) {
         currentBibleSearchResult = null;
-        renderBibleSearchResult('Use the format Book:Chapter:Verse, for example Genesis:1:1.');
+        renderBibleSearchResult('Use the format Book:Chapter:Verse, for example Genesis 1:1');
         return;
       }
 
@@ -2418,7 +3170,10 @@
         }
         const view = document.getElementById('audience-view');
         if (view) {
-          if (msg.transitionType === 'fade') {
+          if (msg.transitionType === 'dissolve') {
+            view.classList.remove('fade-transition', 'fade-out-active');
+            if (document.body.classList.contains('live-window-mode')) await renderAudienceDissolve(msg.payload);
+          } else if (msg.transitionType === 'fade') {
             view.classList.add('fade-transition');
             view.classList.add('fade-out-active');
             setTimeout(async () => {
@@ -2560,6 +3315,1265 @@
       }
     });
 
+
+
+    const BIBLE_BOOKS_ENGLISH = [
+      'Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'
+    ];
+
+    let bibleSuggestionItems = [];
+    let bibleSuggestionIndex = -1;
+
+    function getActiveBibleEntries() {
+      const bible = activeBibleKey && bibleLibraries[activeBibleKey] ? bibleLibraries[activeBibleKey] : null;
+      return bible && Array.isArray(bible.entries) ? bible.entries : [];
+    }
+
+    function normalizeBibleSearchQuery(input) {
+      const trimmed = String(input || '').trim().replace(/\s+/g, ' ');
+      if (!trimmed) return null;
+
+      const match = trimmed.match(/^(.+?)\s+(\d+)\s*[:.]\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/i);
+      if (!match) return null;
+
+      return {
+        book: match[1].trim(),
+        chapter: parseInt(match[2], 10),
+        verse: parseInt(match[3], 10),
+        endVerse: match[4] ? parseInt(match[4], 10) : null
+      };
+    }
+
+    function sqlUnescape(value) {
+      return String(value || '').replace(/''/g, "'").replace(/\\'/g, "'").replace(/\\"/g, '"').trim();
+    }
+
+    function splitSqlTuple(tupleText) {
+      const values = [];
+      let current = '';
+      let quote = '';
+      for (let i = 0; i < tupleText.length; i += 1) {
+        const ch = tupleText[i];
+        const next = tupleText[i + 1];
+        if (quote) {
+          if (ch === quote && next === quote) { current += ch; i += 1; continue; }
+          if (ch === quote) { quote = ''; continue; }
+          current += ch;
+          continue;
+        }
+        if (ch === "'" || ch === '"') { quote = ch; continue; }
+        if (ch === ',') { values.push(current.trim()); current = ''; continue; }
+        current += ch;
+      }
+      values.push(current.trim());
+      return values.map(v => sqlUnescape(v.replace(/^NULL$/i, '')));
+    }
+
+    function extractSqlTuples(sqlText) {
+      const tuples = [];
+      const insertPattern = /INSERT\s+(?:OR\s+IGNORE\s+)?INTO[\s\S]*?VALUES\s*/gi;
+      let match;
+      while ((match = insertPattern.exec(sqlText))) {
+        let i = insertPattern.lastIndex;
+        let depth = 0;
+        let quote = '';
+        let start = -1;
+        for (; i < sqlText.length; i += 1) {
+          const ch = sqlText[i];
+          const next = sqlText[i + 1];
+          if (quote) {
+            if (ch === quote && next === quote) { i += 1; continue; }
+            if (ch === quote) quote = '';
+            continue;
+          }
+          if (ch === "'" || ch === '"') { quote = ch; continue; }
+          if (ch === '(') {
+            if (depth === 0) start = i + 1;
+            depth += 1;
+            continue;
+          }
+          if (ch === ')') {
+            depth -= 1;
+            if (depth === 0 && start >= 0) tuples.push(sqlText.slice(start, i));
+            continue;
+          }
+          if (ch === ';' && depth === 0) break;
+        }
+        insertPattern.lastIndex = i;
+      }
+      return tuples;
+    }
+
+    function parseBibleSql(sqlText, sourceLabel) {
+      const entries = [];
+      const seen = new Set();
+      const addEntry = (book, chapter, verse, text) => {
+        let bookName = book;
+        if (/^\d+$/.test(String(bookName).trim())) {
+          const bookIndex = parseInt(bookName, 10);
+          bookName = BIBLE_BOOKS_ENGLISH[bookIndex - 1] || bookName;
+        }
+        const chapterNum = parseInt(String(chapter).replace(/[^0-9]/g, ''), 10);
+        const verseNum = parseInt(String(verse).replace(/[^0-9]/g, ''), 10);
+        const verseText = String(text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!bookName || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum) || !verseText) return;
+        const normalizedKey = `${normalizeBibleBookName(bookName)}|${chapterNum}|${verseNum}`;
+        if (seen.has(normalizedKey)) return;
+        seen.add(normalizedKey);
+        entries.push({ book: String(bookName).trim(), chapter: chapterNum, verse: verseNum, text: verseText, reference: buildBibleReference(String(bookName).trim(), chapterNum, verseNum), sourceLabel });
+      };
+
+      extractSqlTuples(sqlText).forEach(tuple => {
+        const cols = splitSqlTuple(tuple);
+        if (cols.length < 4) return;
+        const textIndex = cols.findIndex(v => /[A-Za-zÀ-ž]{3,}/.test(v) && String(v).length > 8);
+        if (textIndex < 0) return;
+        const numeric = cols.map((v, idx) => ({ v, idx })).filter(x => /^\d+$/.test(String(x.v).trim()));
+        if (numeric.length >= 3) {
+          const verse = numeric[numeric.length - 1].v;
+          const chapter = numeric[numeric.length - 2].v;
+          const bookCandidate = numeric[numeric.length - 3].v;
+          const bookTextCandidate = cols.find((v, idx) => idx !== textIndex && /[A-Za-zÀ-ž]{2,}/.test(v) && String(v).length < 40);
+          addEntry(bookTextCandidate || bookCandidate, chapter, verse, cols[textIndex]);
+        } else if (numeric.length >= 2) {
+          const bookTextCandidate = cols.find((v, idx) => idx !== textIndex && /[A-Za-zÀ-ž]{2,}/.test(v) && String(v).length < 40);
+          if (bookTextCandidate) addEntry(bookTextCandidate, numeric[0].v, numeric[1].v, cols[textIndex]);
+        }
+      });
+
+      if (!entries.length) {
+        const fallbackPattern = /(['"]?)([A-Za-zÀ-ž0-9 .,'-]+)\1\s*,\s*([0-9]+)\s*,\s*([0-9]+)\s*,\s*(['"])([\s\S]*?)\5/gi;
+        let match;
+        while ((match = fallbackPattern.exec(sqlText))) addEntry(match[2], match[3], match[4], match[6]);
+      }
+      return entries;
+    }
+
+    function parseBibleJson(jsonText, sourceLabel) {
+      const entries = [];
+      const seen = new Set();
+
+      const normalizeBookValue = (book) => {
+        let bookName = String(book || '').trim();
+        if (/^\d+$/.test(bookName)) {
+          const bookIndex = parseInt(bookName, 10);
+          bookName = BIBLE_BOOKS_ENGLISH[bookIndex - 1] || bookName;
+        }
+        return bookName;
+      };
+
+      const addEntry = (book, chapter, verse, text) => {
+        const bookName = normalizeBookValue(book);
+        const chapterNum = parseInt(String(chapter).replace(/[^0-9]/g, ''), 10);
+        const verseNum = parseInt(String(verse).replace(/[^0-9]/g, ''), 10);
+        const verseText = String(text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!bookName || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum) || !verseText) return;
+        const normalizedKey = `${normalizeBibleBookName(bookName)}|${chapterNum}|${verseNum}`;
+        if (seen.has(normalizedKey)) return;
+        seen.add(normalizedKey);
+        entries.push({
+          book: bookName,
+          chapter: chapterNum,
+          verse: verseNum,
+          text: verseText,
+          reference: buildBibleReference(bookName, chapterNum, verseNum),
+          sourceLabel
+        });
+      };
+
+      const getTextValue = (value) => {
+        if (value === null || value === undefined) return '';
+        if (typeof value === 'string' || typeof value === 'number') return String(value);
+        if (typeof value !== 'object') return '';
+        return value.text || value.content || value.verseText || value.versetext || value.scripture || value.message || value.value || '';
+      };
+
+      const readChapterObject = (chapterObj, ctx = {}) => {
+        if (!chapterObj || typeof chapterObj !== 'object') return false;
+        const book = chapterObj.book || chapterObj.bookName || chapterObj.bookname || ctx.book;
+        const chapter = chapterObj.chapter || chapterObj.ch || chapterObj.chap || chapterObj.chapterNumber || chapterObj.number || ctx.chapter;
+        const verses = chapterObj.verses || chapterObj.verseList || chapterObj.children || chapterObj.items;
+        let added = false;
+
+        if (book && chapter && Array.isArray(verses)) {
+          verses.forEach((verseObj, idx) => {
+            if (verseObj && typeof verseObj === 'object') {
+              const verse = verseObj.verse || verseObj.verseNumber || verseObj.verseNum || verseObj.number || verseObj.v || String(idx + 1);
+              const text = getTextValue(verseObj);
+              const before = entries.length;
+              addEntry(book, chapter, verse, text);
+              if (entries.length > before) added = true;
+            } else {
+              const before = entries.length;
+              addEntry(book, chapter, idx + 1, verseObj);
+              if (entries.length > before) added = true;
+            }
+          });
+        } else if (book && chapter && verses && typeof verses === 'object') {
+          Object.keys(verses).forEach((verseKey) => {
+            const before = entries.length;
+            addEntry(book, chapter, verseKey, getTextValue(verses[verseKey]));
+            if (entries.length > before) added = true;
+          });
+        }
+        return added;
+      };
+
+      const walk = (value, ctx = {}, parentKey = '') => {
+        if (value === null || value === undefined) return;
+        if (typeof value === 'string' || typeof value === 'number') {
+          if (ctx.book && ctx.chapter && ctx.verse) addEntry(ctx.book, ctx.chapter, ctx.verse, value);
+          return;
+        }
+        if (Array.isArray(value)) {
+          value.forEach((item, idx) => {
+            const nextCtx = { ...ctx };
+            if (/^chapters?$/i.test(parentKey) && !nextCtx.chapter) nextCtx.chapter = String(idx + 1);
+            if (/^verses?$/i.test(parentKey) && !nextCtx.verse) nextCtx.verse = String(idx + 1);
+            walk(item, nextCtx, parentKey);
+          });
+          return;
+        }
+        if (typeof value !== 'object') return;
+
+        const ctxBook = value.book || value.bibleBook || value.bookName || value.bookname || value.name || value.title || ctx.book;
+        const ctxChapter = value.chapter || value.ch || value.chap || value.chapterNumber || ctx.chapter;
+        const ctxVerse = value.verse || value.verseNumber || value.verseNum || value.number || value.versenum || value.v || ctx.verse;
+        const textValue = getTextValue(value);
+
+        if (ctxBook && ctxChapter !== undefined && ctxVerse !== undefined && textValue) addEntry(ctxBook, ctxChapter, ctxVerse, textValue);
+        readChapterObject(value, { book: ctxBook, chapter: ctxChapter });
+
+        Object.keys(value).forEach((key) => {
+          const child = value[key];
+          const normalizedKey = String(key).toLowerCase();
+          if (['text','content','versetext','scripture','message','value'].includes(normalizedKey)) return;
+
+          const nextCtx = { book: ctxBook, chapter: ctxChapter, verse: ctxVerse };
+          if (normalizedKey === 'chapters' || normalizedKey === 'chapterlist') {
+            walk(child, { book: ctxBook }, key);
+            return;
+          }
+          if (normalizedKey === 'verses' || normalizedKey === 'verselist') {
+            walk(child, { book: ctxBook, chapter: ctxChapter }, key);
+            return;
+          }
+
+          const keyText = String(key).trim();
+          const keyHasLetters = /[A-Za-zÀ-ž]/.test(keyText);
+          const keyNumber = keyText.match(/\d+/);
+          if (!nextCtx.book && keyHasLetters && !['book','biblebook','bookname','name','title'].includes(normalizedKey)) nextCtx.book = keyText;
+          else if (nextCtx.book && !nextCtx.chapter && keyNumber) nextCtx.chapter = keyNumber[0];
+          else if (nextCtx.book && nextCtx.chapter && !nextCtx.verse && keyNumber) nextCtx.verse = keyNumber[0];
+          walk(child, nextCtx, key);
+        });
+      };
+
+      try {
+        const data = JSON.parse(jsonText);
+        walk(data, {});
+      } catch (e) {}
+      return entries;
+    }
+
+    function parseBibleXml(xmlText, sourceLabel) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, 'application/xml');
+      if (doc.getElementsByTagName('parsererror').length) return [];
+      const entries = [];
+      const seen = new Set();
+      const addEntry = (book, chapter, verse, text) => {
+        const chapterNum = parseInt(String(chapter).replace(/[^0-9]/g, ''), 10);
+        const verseNum = parseInt(String(verse).replace(/[^0-9]/g, ''), 10);
+        const verseText = String(text || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        if (!book || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum) || !verseText) return;
+        const normalizedKey = `${normalizeBibleBookName(book)}|${chapterNum}|${verseNum}`;
+        if (seen.has(normalizedKey)) return;
+        seen.add(normalizedKey);
+        entries.push({ book: String(book).trim(), chapter: chapterNum, verse: verseNum, text: verseText, reference: buildBibleReference(String(book).trim(), chapterNum, verseNum), sourceLabel });
+      };
+      const walk = (node, currentBook = '', currentChapter = '') => {
+        if (!node || node.nodeType !== Node.ELEMENT_NODE) return;
+        const tag = (node.tagName || '').toLowerCase();
+        const attrs = {};
+        Array.from(node.attributes || []).forEach(attr => attrs[attr.name.toLowerCase()] = attr.value);
+        let book = currentBook;
+        let chapter = currentChapter;
+        if (['book','biblebook','osisbook','bookofbible','b'].includes(tag)) book = attrs.book || attrs.name || attrs.osisid || attrs.id || attrs.bookname || attrs.bname || attrs.n || book;
+        if (['chapter','chap','c'].includes(tag)) chapter = attrs.chapter || attrs.ch || attrs.number || attrs.n || attrs.cnumber || attrs.chapternum || attrs.value || chapter;
+        const verseValue = attrs.verse || attrs.v || attrs.number || attrs.n || attrs.vnumber || attrs.versenum || attrs.value;
+        if ((['verse','v'].includes(tag) || /verse/i.test(tag)) && book && chapter && verseValue) {
+          addEntry(book, chapter, verseValue, node.textContent);
+        }
+        Array.from(node.children).forEach(child => walk(child, book, chapter));
+      };
+      walk(doc.documentElement);
+      return entries;
+    }
+
+    function isSupportedBibleFile(fileName) {
+      const lowerName = String(fileName || '').toLowerCase();
+      return lowerName.endsWith('.xml') || lowerName.endsWith('.json') || lowerName.endsWith('.sql') || lowerName.endsWith('.txt') || lowerName.endsWith('.csv');
+    }
+
+    function makeBibleLibraryKey(fileName) {
+      const baseName = String(fileName || '')
+        .replace(/\.(xml|json|sql|txt|csv)$/i, '')
+        .trim()
+        .replace(/[^a-z0-9]+/gi, '_')
+        .replace(/^_+|_+$/g, '') || 'imported_bible';
+      let key = baseName.toLowerCase();
+      let suffix = 2;
+      while (bibleLibraries[key]) key = `${baseName.toLowerCase()}_${suffix++}`;
+      return key;
+    }
+
+    async function parseBibleFile(file) {
+      const lowerName = String(file && file.name ? file.name : '').toLowerCase();
+      const sourceLabel = file.name.replace(/\.(xml|json|sql|txt|csv)$/i, '');
+      const text = await file.text();
+      if (lowerName.endsWith('.xml')) return parseBibleXml(text, sourceLabel);
+      if (lowerName.endsWith('.json')) return parseBibleJson(text, sourceLabel);
+      if (lowerName.endsWith('.sql')) return parseBibleSql(text, sourceLabel);
+      return parseBiblePlainText(text, sourceLabel);
+    }
+
+    function parseBiblePlainText(text, sourceLabel) {
+      const entries = [];
+      const seen = new Set();
+      const addEntry = (book, chapter, verse, verseText) => {
+        const chapterNum = parseInt(chapter, 10);
+        const verseNum = parseInt(verse, 10);
+        const cleanText = String(verseText || '').replace(/\s+/g, ' ').trim();
+        if (!book || !Number.isFinite(chapterNum) || !Number.isFinite(verseNum) || !cleanText) return;
+        const normalizedKey = `${normalizeBibleBookName(book)}|${chapterNum}|${verseNum}`;
+        if (seen.has(normalizedKey)) return;
+        seen.add(normalizedKey);
+        entries.push({ book, chapter: chapterNum, verse: verseNum, text: cleanText, reference: buildBibleReference(book, chapterNum, verseNum), sourceLabel });
+      };
+      String(text || '').split(/\r?\n/).forEach(line => {
+        const direct = line.trim().match(/^(.+?)\s+(\d+)\s*[:.]\s*(\d+)\s+(.+)$/);
+        if (direct) addEntry(direct[1].trim(), direct[2], direct[3], direct[4]);
+        const csv = line.match(/^"?([^",]+)"?,\s*(\d+),\s*(\d+),\s*"?(.+?)"?$/);
+        if (csv) addEntry(csv[1].trim(), csv[2], csv[3], csv[4]);
+      });
+      return entries;
+    }
+
+    function chooseBibleFolderFiles() {
+      const folderInput = document.getElementById('bible-folder-uploader');
+      if (folderInput) folderInput.click();
+    }
+
+    function getPendingBibleImportFiles() {
+      const fileInput = document.getElementById('bible-file-uploader');
+      const folderInput = document.getElementById('bible-folder-uploader');
+      const allFiles = [];
+      if (fileInput && fileInput.files) allFiles.push(...Array.from(fileInput.files));
+      if (folderInput && folderInput.files) allFiles.push(...Array.from(folderInput.files));
+
+      const unique = [];
+      const seen = new Set();
+      allFiles.forEach((file) => {
+        const path = file.webkitRelativePath || file.name || '';
+        const key = `${path}|${file.size}|${file.lastModified}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(file);
+        }
+      });
+      return unique;
+    }
+
+    function updateBiblePendingFileStatus() {
+      const status = document.getElementById('bible-pending-file-status');
+      if (!status) return;
+      const files = getPendingBibleImportFiles();
+      const supported = files.filter(file => isSupportedBibleFile(file.name));
+      const folderCount = supported.filter(file => file.webkitRelativePath).length;
+      if (!files.length) {
+        status.textContent = '';
+        showBibleLibraryFlash('', false, true);
+        return;
+      }
+      const sampleNames = supported.slice(0, 3).map(file => file.webkitRelativePath || file.name).join(', ');
+      const msg = `Bible import: ${supported.length} supported file${supported.length === 1 ? '' : 's'} ready${folderCount ? ' from folder upload' : ''}. ${sampleNames ? 'Example: ' + sampleNames : ''}`;
+      status.textContent = msg;
+      showBibleLibraryFlash(msg, false, false);
+    }
+
+    async function importBibleFiles() {
+      const input = document.getElementById('bible-file-uploader');
+      const folderInput = document.getElementById('bible-folder-uploader');
+      const files = getPendingBibleImportFiles();
+      if (!files.length) {
+        renderBibleSearchResult('Choose Bible files or a Bible folder first, then click Accept.');
+        updateBiblePendingFileStatus();
+        return;
+      }
+
+      const supportedFiles = files.filter(file => isSupportedBibleFile(file.name));
+      if (!supportedFiles.length) {
+        renderBibleSearchResult('No supported Bible files found in the selected folder. Use JSON, XML, SQL, TXT, or CSV.');
+        updateBiblePendingFileStatus();
+        return;
+      }
+
+      let importedCount = 0;
+      const skipped = [];
+      const folderGroups = {};
+      const singleFiles = [];
+
+      supportedFiles.forEach((file) => {
+        const relativePath = file.webkitRelativePath || '';
+        if (relativePath && relativePath.includes('/')) {
+          const folderName = relativePath.split('/')[0] || 'Folder Bible';
+          if (!folderGroups[folderName]) folderGroups[folderName] = [];
+          folderGroups[folderName].push(file);
+        } else {
+          singleFiles.push(file);
+        }
+      });
+
+      const saveMergedLibrary = async (label, entries) => {
+        const fixedEntries = fixBibleEntryBookNames ? fixBibleEntryBookNames(entries) : entries;
+        if (!fixedEntries.length) return { imported: false, reason: 'no readable verses' };
+        const key = makeBibleLibraryKey(label + '.json');
+        bibleLibraries[key] = { key, label, entries: fixedEntries };
+        await saveBibleLibraryToDB(key, bibleLibraries[key]);
+        if (!activeBibleKey) activeBibleKey = key;
+        if (typeof saveBibleLibraryToFirebase === 'function') {
+          try {
+            setBibleFirebaseStatus('Firebase: saving Bible folder only...');
+            const cloudResult = await saveBibleLibraryToFirebase(key, bibleLibraries[key]);
+            setBibleFirebaseStatus('Firebase: saved Bible folder only (' + (cloudResult.verseCount || fixedEntries.length) + ' verses).');
+          } catch (error) {
+            setBibleFirebaseStatus('Firebase: Bible folder cloud save failed - ' + (error && error.message ? error.message : 'cloud save failed'), true);
+          }
+        }
+        return { imported: true, key, label };
+      };
+
+      for (const folderName of Object.keys(folderGroups)) {
+        const groupFiles = folderGroups[folderName].sort((a, b) => String(a.webkitRelativePath || a.name).localeCompare(String(b.webkitRelativePath || b.name), undefined, { numeric: true }));
+        const mergedEntries = [];
+        for (const file of groupFiles) {
+          try {
+            const parsed = await parseBibleFile(file);
+            if (parsed && parsed.length) mergedEntries.push(...parsed);
+            else skipped.push(`${file.webkitRelativePath || file.name}: no readable verses`);
+          } catch (error) {
+            skipped.push(`${file.webkitRelativePath || file.name}: ${error && error.message ? error.message : 'read failed'}`);
+          }
+        }
+        const result = await saveMergedLibrary(folderName, mergedEntries);
+        if (result.imported) importedCount += 1;
+        else skipped.push(`${folderName}: ${result.reason || 'skipped'}`);
+      }
+
+      for (const file of singleFiles) {
+        const result = await importBibleFileObject(file);
+        if (result.imported) importedCount += 1;
+        else skipped.push(`${file.name}: ${result.reason || 'skipped'}`);
+      }
+
+      populateBibleLibrarySelector();
+      renderBibleSearchResult(importedCount ? '' : (skipped[0] || 'No readable Bible content was found.'));
+      updateBibleSuggestions();
+      if (importedCount) showModal('Bible Import Complete', `Imported ${importedCount} Bible librar${importedCount === 1 ? 'y' : 'ies'}. ${Object.keys(folderGroups).length ? 'Folder files were merged into folder Bible libraries. ' : ''}${skipped.length ? 'Skipped: ' + skipped.slice(0, 3).join('; ') : ''}`, false);
+      if (input) input.value = '';
+      if (folderInput) folderInput.value = '';
+      updateBiblePendingFileStatus();
+    }
+
+    function setActiveBibleLibrary(key) {
+      activeBibleKey = key;
+      currentBibleSearchResult = null;
+      renderBibleSearchResult();
+      updateBibleSuggestions();
+    }
+
+    function getReferencePartsForLooseQuery(raw) {
+      const query = String(raw || '').trim().replace(/\s+/g, ' ');
+      if (!query) return null;
+      const full = query.match(/^(.+?)\s+(\d+)\s*[:.]\s*(\d+)(?:\s*[-–—]\s*(\d+))?$/i);
+      if (full) return { book: full[1].trim(), chapter: parseInt(full[2], 10), verse: parseInt(full[3], 10), endVerse: full[4] ? parseInt(full[4], 10) : null };
+      const chapterOnly = query.match(/^(.+?)\s+(\d+)$/i);
+      if (chapterOnly) return { book: chapterOnly[1].trim(), chapter: parseInt(chapterOnly[2], 10), verse: null, endVerse: null };
+      return null;
+    }
+
+    function buildBibleSuggestions(query) {
+      const entries = getActiveBibleEntries();
+      if (!entries.length) return [];
+      const raw = String(query || '').trim().replace(/\s+/g, ' ');
+      if (!raw) return [];
+
+      const normalizedRaw = normalizeBibleBookName(raw);
+      const refParts = getReferencePartsForLooseQuery(raw);
+      const seen = new Set();
+      const suggestions = [];
+      const addSuggestion = (label, value, entry) => {
+        const key = value + '|' + label;
+        if (seen.has(key)) return;
+        seen.add(key);
+        suggestions.push({ label, value, entry });
+      };
+
+      if (refParts && refParts.book && refParts.chapter && refParts.verse !== null) {
+        entries
+          .filter(entry => normalizeBibleBookName(entry.book).includes(normalizeBibleBookName(refParts.book)) && entry.chapter === refParts.chapter && String(entry.verse).startsWith(String(refParts.verse)))
+          .slice(0, 20)
+          .forEach(entry => addSuggestion(`${entry.reference} — ${entry.text.slice(0, 90)}`, entry.reference, entry));
+        return suggestions;
+      }
+
+      if (refParts && refParts.book && refParts.chapter) {
+        entries
+          .filter(entry => normalizeBibleBookName(entry.book).includes(normalizeBibleBookName(refParts.book)) && entry.chapter === refParts.chapter)
+          .slice(0, 30)
+          .forEach(entry => addSuggestion(`${entry.reference} — ${entry.text.slice(0, 90)}`, entry.reference, entry));
+        return suggestions;
+      }
+
+      const books = Array.from(new Set(entries.map(entry => entry.book))).sort((a, b) => a.localeCompare(b));
+      books
+        .filter(book => normalizeBibleBookName(book).includes(normalizedRaw))
+        .slice(0, 8)
+        .forEach(book => addSuggestion(book, `${book} `, null));
+
+      entries
+        .filter(entry => {
+          const refText = `${entry.book} ${entry.chapter}:${entry.verse}`.toLowerCase();
+          const verseText = String(entry.text || '').toLowerCase();
+          const q = raw.toLowerCase();
+          return refText.includes(q) || verseText.includes(q);
+        })
+        .slice(0, 20)
+        .forEach(entry => addSuggestion(`${entry.reference} — ${entry.text.slice(0, 90)}`, entry.reference, entry));
+
+      return suggestions.slice(0, 25);
+    }
+
+    function updateBibleSuggestions() {
+      const input = document.getElementById('bible-search-input');
+      const box = document.getElementById('bible-suggestions');
+      if (!input || !box) return;
+      bibleSuggestionItems = buildBibleSuggestions(input.value);
+      bibleSuggestionIndex = -1;
+      if (!bibleSuggestionItems.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+      box.innerHTML = bibleSuggestionItems.map((item, idx) => `<button type="button" class="bible-suggestion-item" data-index="${idx}">${escapeHtml(item.label)}</button>`).join('');
+      box.style.display = 'block';
+      Array.from(box.querySelectorAll('.bible-suggestion-item')).forEach(btn => {
+        btn.onclick = () => selectBibleSuggestion(parseInt(btn.getAttribute('data-index'), 10));
+      });
+    }
+
+    function selectBibleSuggestion(index) {
+      const item = bibleSuggestionItems[index];
+      const input = document.getElementById('bible-search-input');
+      const box = document.getElementById('bible-suggestions');
+      if (!item || !input) return;
+      input.value = item.value;
+      if (box) { box.style.display = 'none'; box.innerHTML = ''; }
+      if (item.entry || /\d+\s*[:.]\s*\d+/.test(item.value)) searchBibleVerse();
+      else { input.focus(); updateBibleSuggestions(); }
+    }
+
+    function handleBibleSearchKeydown(event) {
+      const box = document.getElementById('bible-suggestions');
+      const buttons = box ? Array.from(box.querySelectorAll('.bible-suggestion-item')) : [];
+      if (event.key === 'Enter') {
+        if (bibleSuggestionIndex >= 0 && bibleSuggestionItems[bibleSuggestionIndex]) {
+          event.preventDefault();
+          selectBibleSuggestion(bibleSuggestionIndex);
+        } else {
+          event.preventDefault();
+          searchBibleVerse();
+        }
+        return;
+      }
+      if (!buttons.length || !['ArrowDown','ArrowUp'].includes(event.key)) return;
+      event.preventDefault();
+      bibleSuggestionIndex += event.key === 'ArrowDown' ? 1 : -1;
+      if (bibleSuggestionIndex < 0) bibleSuggestionIndex = buttons.length - 1;
+      if (bibleSuggestionIndex >= buttons.length) bibleSuggestionIndex = 0;
+      buttons.forEach((btn, idx) => btn.classList.toggle('active', idx === bibleSuggestionIndex));
+      buttons[bibleSuggestionIndex].scrollIntoView({ block: 'nearest' });
+    }
+
+    function searchBibleVerse() {
+      const input = document.getElementById('bible-search-input');
+      const query = input ? input.value : '';
+      const parsed = normalizeBibleSearchQuery(query);
+      const bible = activeBibleKey && bibleLibraries[activeBibleKey] ? bibleLibraries[activeBibleKey] : null;
+      const suggestionsBox = document.getElementById('bible-suggestions');
+      if (suggestionsBox) suggestionsBox.style.display = 'none';
+
+      if (!bible || !bible.entries || !bible.entries.length) {
+        currentBibleSearchResult = null;
+        renderBibleSearchResult('Choose a Bible file and click Accept first.');
+        return;
+      }
+
+      let matches = [];
+      if (parsed) {
+        matches = bible.entries.filter(entry => normalizeBibleBookName(entry.book) === normalizeBibleBookName(parsed.book) && entry.chapter === parsed.chapter && entry.verse >= parsed.verse && entry.verse <= (parsed.endVerse || parsed.verse));
+      }
+
+      if (!matches.length) {
+        const suggestions = buildBibleSuggestions(query);
+        const firstVerseSuggestion = suggestions.find(item => item.entry);
+        if (firstVerseSuggestion && firstVerseSuggestion.entry) {
+          matches = [firstVerseSuggestion.entry];
+          if (input) input.value = firstVerseSuggestion.entry.reference;
+        }
+      }
+
+      if (!matches.length) {
+        currentBibleSearchResult = null;
+        renderBibleSearchResult('No match yet. Keep typing and choose from the suggestions.');
+        updateBibleSuggestions();
+        return;
+      }
+
+      currentBibleSearchResult = {
+        book: matches[0].book,
+        chapter: matches[0].chapter,
+        verse: matches[0].verse,
+        reference: matches.length > 1 ? `${matches[0].book} ${matches[0].chapter}:${matches[0].verse}-${matches[matches.length - 1].verse}` : matches[0].reference,
+        text: matches.map(m => m.text).join(' '),
+        sourceLabel: matches[0].sourceLabel
+      };
+      renderBibleSearchResult();
+    }
+
+    function renderBibleSearchResult(message = '') {
+      const resultBox = document.getElementById('bible-search-result');
+      if (!resultBox) return;
+      if (message) { resultBox.innerHTML = `<div style="color: var(--accent-red);">${escapeHtml(message)}</div>`; return; }
+      const totalLibraries = Object.keys(bibleLibraries).length;
+      if (!activeBibleKey || !bibleLibraries[activeBibleKey]) {
+        resultBox.innerHTML = '<div style="color: var(--text-muted);">Choose a Bible file, click Accept, then type freely to search.</div>';
+        return;
+      }
+      if (!currentBibleSearchResult) {
+        const active = bibleLibraries[activeBibleKey];
+        resultBox.innerHTML = `<div style="color: var(--text-muted);">${escapeHtml(active.label || activeBibleKey)} loaded with ${(active.entries || []).length.toLocaleString()} verses. ${totalLibraries > 1 ? totalLibraries + ' Bible libraries available.' : ''} Type freely to search books, chapters, verses, or words.</div>`;
+        return;
+      }
+      resultBox.innerHTML = `
+        <div style="font-weight: 700; color: var(--text);">${escapeHtml(currentBibleSearchResult.reference)}</div>
+        <div style="margin-top: 6px; color: var(--text-muted);">${escapeHtml(currentBibleSearchResult.text)}</div>
+      `;
+    }
+
+    const originalRenderAudience = renderAudience;
+    renderAudience = async function(payload) {
+      if (payload && payload.type === 'bible') {
+        const audienceTarget = document.getElementById('audience-view');
+        let bgLayer = document.getElementById('audience-bg-layer');
+        if (!bgLayer) { bgLayer = document.createElement('div'); bgLayer.id = 'audience-bg-layer'; }
+        const verse = payload.value || {};
+        const tempWrapper = document.createElement('div');
+        tempWrapper.style.width = '100%';
+        tempWrapper.style.height = '100%';
+        tempWrapper.style.position = 'absolute';
+        const card = document.createElement('div');
+        card.className = 'bible-card';
+        card.innerHTML = '<div class="bible-category-tag">' + escapeHtml(verse.category || payload.category || 'Bible') + '</div>' +
+          '<div class="bible-text">' + escapeHtml(verse.text || '') + '</div>' +
+          '<div class="bible-reference">' + escapeHtml(verse.reference || payload.name || '') + '</div>';
+        tempWrapper.appendChild(card);
+        Array.from(audienceTarget.children).filter(el => el.id !== 'audience-bg-layer').forEach(el => el.remove());
+        audienceTarget.appendChild(bgLayer);
+        audienceTarget.appendChild(tempWrapper);
+        return;
+      }
+      return originalRenderAudience(payload);
+    };
+
+
+    /* Final Bible fixes: free search display names, fit-to-screen text, and verse background images. */
+    const BIBLE_BOOK_CANONICAL_NAMES = [
+      'Genesis','Exodus','Leviticus','Numbers','Deuteronomy','Joshua','Judges','Ruth','1 Samuel','2 Samuel','1 Kings','2 Kings','1 Chronicles','2 Chronicles','Ezra','Nehemiah','Esther','Job','Psalms','Proverbs','Ecclesiastes','Song of Solomon','Isaiah','Jeremiah','Lamentations','Ezekiel','Daniel','Hosea','Joel','Amos','Obadiah','Jonah','Micah','Nahum','Habakkuk','Zephaniah','Haggai','Zechariah','Malachi','Matthew','Mark','Luke','John','Acts','Romans','1 Corinthians','2 Corinthians','Galatians','Ephesians','Philippians','Colossians','1 Thessalonians','2 Thessalonians','1 Timothy','2 Timothy','Titus','Philemon','Hebrews','James','1 Peter','2 Peter','1 John','2 John','3 John','Jude','Revelation'
+    ];
+
+    const BIBLE_BOOK_ALIAS_MAP = (() => {
+      const pairs = [
+        ['gen','Genesis'],['ge','Genesis'],['gn','Genesis'],['exo','Exodus'],['exod','Exodus'],['ex','Exodus'],['lev','Leviticus'],['num','Numbers'],['deut','Deuteronomy'],['dt','Deuteronomy'],['josh','Joshua'],['judg','Judges'],['jdg','Judges'],['ps','Psalms'],['psa','Psalms'],['psalm','Psalms'],['prov','Proverbs'],['pr','Proverbs'],['eccl','Ecclesiastes'],['song','Song of Solomon'],['sos','Song of Solomon'],['isa','Isaiah'],['jer','Jeremiah'],['lam','Lamentations'],['ezek','Ezekiel'],['dan','Daniel'],['hos','Hosea'],['obad','Obadiah'],['jon','Jonah'],['mic','Micah'],['nah','Nahum'],['hab','Habakkuk'],['zeph','Zephaniah'],['hag','Haggai'],['zech','Zechariah'],['mal','Malachi'],['matt','Matthew'],['mt','Matthew'],['mk','Mark'],['mrk','Mark'],['lk','Luke'],['jn','John'],['rom','Romans'],['1cor','1 Corinthians'],['2cor','2 Corinthians'],['gal','Galatians'],['eph','Ephesians'],['phil','Philippians'],['col','Colossians'],['1thess','1 Thessalonians'],['2thess','2 Thessalonians'],['1tim','1 Timothy'],['2tim','2 Timothy'],['heb','Hebrews'],['jas','James'],['rev','Revelation']
+      ];
+      const map = {};
+      BIBLE_BOOK_CANONICAL_NAMES.forEach((name, index) => {
+        map[String(index + 1)] = name;
+        map[normalizeBibleBookName(name)] = name;
+      });
+      pairs.forEach(([alias, name]) => { map[normalizeBibleBookName(alias)] = name; });
+      return map;
+    })();
+
+    function canonicalBibleBookName(value) {
+      const raw = String(value || '').trim();
+      if (!raw) return raw;
+      if (/^0*\d+$/.test(raw)) {
+        const bookNumber = parseInt(raw, 10);
+        return BIBLE_BOOK_CANONICAL_NAMES[bookNumber - 1] || raw;
+      }
+      const normalized = normalizeBibleBookName(raw);
+      return BIBLE_BOOK_ALIAS_MAP[normalized] || raw;
+    }
+
+    function fixBibleEntryBookNames(entries) {
+      return (entries || []).map(entry => {
+        const fixedBook = canonicalBibleBookName(entry.book);
+        const chapterNum = parseInt(String(entry.chapter).replace(/[^0-9]/g, ''), 10) || 1;
+        const verseNum = parseInt(String(entry.verse).replace(/[^0-9]/g, ''), 10) || 1;
+        return Object.assign({}, entry, {
+          book: fixedBook,
+          chapter: chapterNum,
+          verse: verseNum,
+          reference: buildBibleReference(fixedBook, chapterNum, verseNum)
+        });
+      });
+    }
+
+    const finalOriginalImportBibleFileObject = importBibleFileObject;
+    importBibleFileObject = async function(file) {
+      const result = await finalOriginalImportBibleFileObject(file);
+      if (result && result.imported && result.key && bibleLibraries[result.key]) {
+        bibleLibraries[result.key].entries = fixBibleEntryBookNames(bibleLibraries[result.key].entries);
+        await saveBibleLibraryToDB(result.key, bibleLibraries[result.key]);
+      }
+      return result;
+    };
+
+    const finalOriginalLoadBibleLibrariesFromStorage = loadBibleLibrariesFromStorage;
+    loadBibleLibrariesFromStorage = async function() {
+      await finalOriginalLoadBibleLibrariesFromStorage();
+      Object.keys(bibleLibraries).forEach(key => {
+        bibleLibraries[key].entries = fixBibleEntryBookNames(bibleLibraries[key].entries);
+      });
+    };
+
+    function getBibleBackgroundSourceFromPayload(payload) {
+      const verse = payload && payload.value ? payload.value : {};
+      return verse.backgroundSource || payload.backgroundSource || currentBackgroundSource || '';
+    }
+
+    function makeBiblePresentationCard(payload) {
+      const verse = payload && payload.value ? payload.value : {};
+      const card = document.createElement('div');
+      card.className = 'bible-card';
+      const bg = getBibleBackgroundSourceFromPayload(payload);
+      if (bg) {
+        card.style.backgroundImage = "url('" + String(bg).replace(/'/g, "%27") + "')";
+      }
+      const reference = verse.reference || payload.name || '';
+      card.innerHTML = '<div class="bible-category-tag">' + escapeHtml(verse.category || payload.category || 'Bible') + '</div>' +
+        '<div class="bible-text">' + escapeHtml(verse.text || '') + '</div>' +
+        '<div class="bible-reference">' + escapeHtml(reference) + '</div>';
+      return card;
+    }
+
+    function fitBibleCardText(card) {
+      if (!card) return;
+      const text = card.querySelector('.bible-text');
+      const reference = card.querySelector('.bible-reference');
+      const category = card.querySelector('.bible-category-tag');
+      if (!text) return;
+
+      text.style.fontSize = '';
+      reference && (reference.style.fontSize = '');
+      category && (category.style.fontSize = '');
+
+      const cardHeight = Math.max(1, card.clientHeight);
+      const cardWidth = Math.max(1, card.clientWidth);
+      let textSize = Math.min(52, Math.max(18, cardWidth * 0.045));
+      let refSize = Math.min(30, Math.max(14, cardWidth * 0.024));
+      let tagSize = Math.min(15, Math.max(10, cardWidth * 0.012));
+
+      const applySizes = () => {
+        text.style.fontSize = textSize + 'px';
+        text.style.lineHeight = textSize <= 24 ? '1.08' : '1.14';
+        if (reference) reference.style.fontSize = refSize + 'px';
+        if (category) category.style.fontSize = tagSize + 'px';
+      };
+
+      applySizes();
+      let guard = 0;
+      while ((card.scrollHeight > cardHeight || card.scrollWidth > cardWidth) && textSize > 13 && guard < 80) {
+        textSize -= 1;
+        refSize = Math.max(11, refSize - 0.35);
+        tagSize = Math.max(8, tagSize - 0.18);
+        applySizes();
+        guard += 1;
+      }
+    }
+
+    function fitAllBibleCardsSoon() {
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.bible-card').forEach(fitBibleCardText);
+      });
+    }
+
+    const finalOriginalRenderMediaIntoViewport = renderMediaIntoViewport;
+    renderMediaIntoViewport = async function(target, payload, options = {}) {
+      if (payload && payload.type === 'bible') {
+        const label = target.querySelector('.viewport-label');
+        const placeholderId = options.placeholderId || 'preview-placeholder';
+        target.innerHTML = '';
+        if (label) target.appendChild(label);
+        if (!payload.value) {
+          const placeholder = document.createElement('div');
+          placeholder.id = placeholderId;
+          placeholder.style.color = '#555';
+          placeholder.textContent = options.emptyText || 'No Media Queued';
+          target.appendChild(placeholder);
+          return;
+        }
+        const card = makeBiblePresentationCard(payload);
+        target.appendChild(card);
+        fitBibleCardText(card);
+        setTimeout(() => fitBibleCardText(card), 80);
+        return;
+      }
+      return finalOriginalRenderMediaIntoViewport(target, payload, options);
+    };
+
+    function bibleResultToPayload(result, bible) {
+      return {
+        category: bible ? (bible.label || activeBibleKey) : 'Bible',
+        reference: result.reference,
+        text: result.text,
+        backgroundSource: currentBackgroundSource || ''
+      };
+    }
+
+    previewBibleSearchResult = function() {
+      if (!currentBibleSearchResult) {
+        renderBibleSearchResult('Search for a verse before previewing it.');
+        return;
+      }
+      const bible = activeBibleKey && bibleLibraries[activeBibleKey] ? bibleLibraries[activeBibleKey] : null;
+      staged = {
+        type: 'bible',
+        value: bibleResultToPayload(currentBibleSearchResult, bible),
+        name: currentBibleSearchResult.reference,
+        category: bible ? (bible.label || activeBibleKey) : 'Bible',
+        sceneItemIndex: -1,
+        page: 1,
+        videoTime: 0,
+        videoPlaying: false
+      };
+      renderSceneDeckUI();
+      renderPreview();
+      setSlideStatus();
+    };
+
+    addBibleSearchResultToScene = function() {
+      if (!currentBibleSearchResult) {
+        renderBibleSearchResult('Search for a verse before adding it to the scene.');
+        return;
+      }
+      const scene = getActiveScene();
+      const bible = activeBibleKey && bibleLibraries[activeBibleKey] ? bibleLibraries[activeBibleKey] : null;
+      if (!scene) return;
+      scene.items.push({
+        id: uid(),
+        type: 'bible',
+        value: bibleResultToPayload(currentBibleSearchResult, bible),
+        name: currentBibleSearchResult.reference,
+        category: bible ? (bible.label || activeBibleKey) : 'Bible'
+      });
+      persistScenes();
+      renderSceneDeckUI();
+      setStagedFromSceneIndex(scene.items.length - 1);
+    };
+
+    const finalOriginalRenderAudience = renderAudience;
+    renderAudience = async function(payload) {
+      if (payload && payload.type === 'bible') {
+        const audienceTarget = document.getElementById('audience-view');
+        let bgLayer = document.getElementById('audience-bg-layer');
+        if (!bgLayer) { bgLayer = document.createElement('div'); bgLayer.id = 'audience-bg-layer'; }
+        const tempWrapper = document.createElement('div');
+        tempWrapper.style.width = '100%';
+        tempWrapper.style.height = '100%';
+        tempWrapper.style.position = 'absolute';
+        tempWrapper.style.inset = '0';
+        const card = makeBiblePresentationCard(payload);
+        tempWrapper.appendChild(card);
+        Array.from(audienceTarget.children).filter(el => el.id !== 'audience-bg-layer').forEach(el => el.remove());
+        audienceTarget.appendChild(bgLayer);
+        audienceTarget.appendChild(tempWrapper);
+        fitBibleCardText(card);
+        setTimeout(() => fitBibleCardText(card), 120);
+        return;
+      }
+      return finalOriginalRenderAudience(payload);
+    };
+
+
+    /* User-requested final improvements: no word hyphenation, no language flash, and Canva live mirroring. */
+    function makeBiblePresentationCard(payload) {
+      const verse = payload && payload.value ? payload.value : {};
+      const card = document.createElement('div');
+      card.className = 'bible-card';
+      const bg = getBibleBackgroundSourceFromPayload(payload);
+      if (bg) card.style.backgroundImage = "url('" + String(bg).replace(/'/g, "%27") + "')";
+      const reference = verse.reference || payload.name || '';
+      card.innerHTML =
+        '<div class="bible-text">' + escapeHtml(verse.text || '') + '</div>' +
+        '<div class="bible-reference">' + escapeHtml(reference) + '</div>';
+      return card;
+    }
+
+    function fitBibleCardText(card) {
+      if (!card) return;
+      const text = card.querySelector('.bible-text');
+      const reference = card.querySelector('.bible-reference');
+      if (!text) return;
+
+      text.style.fontSize = '';
+      text.style.lineHeight = '';
+      text.style.overflowWrap = 'normal';
+      text.style.wordBreak = 'normal';
+      text.style.hyphens = 'none';
+      text.style.webkitHyphens = 'none';
+      if (reference) {
+        reference.style.fontSize = '';
+        reference.style.overflowWrap = 'normal';
+        reference.style.wordBreak = 'normal';
+        reference.style.hyphens = 'none';
+        reference.style.webkitHyphens = 'none';
+      }
+
+      const cardHeight = Math.max(1, card.clientHeight);
+      const cardWidth = Math.max(1, card.clientWidth);
+      let textSize = Math.min(52, Math.max(18, cardWidth * 0.044));
+      let refSize = Math.min(30, Math.max(14, cardWidth * 0.024));
+
+      const applySizes = () => {
+        text.style.fontSize = textSize + 'px';
+        text.style.lineHeight = textSize <= 22 ? '1.06' : '1.13';
+        if (reference) reference.style.fontSize = refSize + 'px';
+      };
+
+      applySizes();
+      let guard = 0;
+      while ((card.scrollHeight > cardHeight || card.scrollWidth > cardWidth) && textSize > 10 && guard < 100) {
+        textSize -= 1;
+        refSize = Math.max(10, refSize - 0.35);
+        applySizes();
+        guard += 1;
+      }
+    }
+
+    /* Canva auto screen-share mirroring removed by request. Canva now behaves as a normal embedded presentation again.
+       The optional manual Preview Target Sync button remains available only if the operator clicks it. */
+
+
+    /* Canva safe display: hide LIVE badge only for Canva and add small safe-area scaling to avoid edge cropping. */
+    function tuneCanvaViewport(target, payload) {
+      if (!target) return;
+      const isCanva = Boolean(payload && payload.type === 'url');
+      target.classList.toggle('canva-content-mode', isCanva);
+      target.classList.toggle('canva-live-content-mode', isCanva && target.id === 'live-viewport');
+      if (!isCanva) return;
+      const iframe = target.querySelector('iframe');
+      if (iframe) {
+        iframe.classList.add('canva-fit-frame');
+        iframe.setAttribute('scrolling', 'no');
+        iframe.style.border = '0';
+        iframe.style.display = 'block';
+        iframe.style.background = '#000';
+      }
+    }
+
+    const canvaSafeOriginalRenderMediaIntoViewport = renderMediaIntoViewport;
+    renderMediaIntoViewport = async function(target, payload, options = {}) {
+      if (target) {
+        const isCanva = Boolean(payload && payload.type === 'url');
+        target.classList.toggle('canva-content-mode', isCanva);
+        target.classList.toggle('canva-live-content-mode', isCanva && target.id === 'live-viewport');
+      }
+      const result = await canvaSafeOriginalRenderMediaIntoViewport(target, payload, options);
+      tuneCanvaViewport(target, payload);
+      return result;
+    };
+
+    const canvaSafeOriginalRenderAudience = renderAudience;
+    renderAudience = async function(payload) {
+      if (payload && payload.type === 'url' && payload.value) {
+        const audienceTarget = document.getElementById('audience-view');
+        let bgLayer = document.getElementById('audience-bg-layer');
+        if (!bgLayer) {
+          bgLayer = document.createElement('div');
+          bgLayer.id = 'audience-bg-layer';
+        }
+
+        const tempWrapper = document.createElement('div');
+        tempWrapper.className = 'canva-audience-wrapper';
+        tempWrapper.style.width = '100%';
+        tempWrapper.style.height = '100%';
+        tempWrapper.style.position = 'absolute';
+        tempWrapper.style.inset = '0';
+        tempWrapper.style.overflow = 'hidden';
+        tempWrapper.style.background = '#000';
+
+        const iframe = document.createElement('iframe');
+        iframe.src = payload.value;
+        iframe.className = 'canva-fit-frame';
+        iframe.setAttribute('allow', 'fullscreen');
+        iframe.setAttribute('scrolling', 'no');
+        iframe.style.border = '0';
+        iframe.style.display = 'block';
+        iframe.style.background = '#000';
+        tempWrapper.appendChild(iframe);
+
+        Array.from(audienceTarget.children).filter(el => el.id !== 'audience-bg-layer').forEach(el => el.remove());
+        audienceTarget.appendChild(bgLayer);
+        audienceTarget.appendChild(tempWrapper);
+        return;
+      }
+      return canvaSafeOriginalRenderAudience(payload);
+    };
+
+
+
+    /* Bible Library tools: reset saved Bibles, choose a dedicated Bible background, and dissolve transitions. */
+    const LS_BIBLE_BG_DATA = 'mps_bible_background_data_v1';
+    const LS_BIBLE_BG_NAME = 'mps_bible_background_name_v1';
+    let currentBibleBackgroundSource = localStorage.getItem(LS_BIBLE_BG_DATA) || '';
+
+    function updateBibleBackgroundStatus() {
+      const el = document.getElementById('bible-background-status');
+      if (!el) return;
+      const name = localStorage.getItem('LS_BIBLE_BG_NAME') || localStorage.getItem('mps_bible_background_name_v1') || '';
+      if (currentBibleBackgroundSource) {
+        el.textContent = 'Bible background: ' + (name || 'custom image') + ' selected.';
+      } else if (currentBackgroundSource) {
+        el.textContent = 'Bible background: using the current global background.';
+      } else {
+        el.textContent = '';
+      }
+    }
+
+    function getSelectedBibleBackgroundSource() {
+      return currentBibleBackgroundSource || currentBackgroundSource || '';
+    }
+
+    function chooseBibleBackgroundImage() {
+      const input = document.getElementById('bible-background-uploader');
+      if (input) input.click();
+    }
+
+    function handleBibleBackgroundFile(event) {
+      const file = event && event.target && event.target.files ? event.target.files[0] : null;
+      if (!file) return;
+      if (!file.type || !file.type.startsWith('image/')) {
+        showModal('Invalid Background', 'Please choose an image file for the Bible verse background.', false);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        currentBibleBackgroundSource = String(reader.result || '');
+        try {
+          localStorage.setItem(LS_BIBLE_BG_DATA, currentBibleBackgroundSource);
+          localStorage.setItem(LS_BIBLE_BG_NAME, file.name || 'custom image');
+        } catch (e) {
+          showModal('Background Too Large', 'The selected image is too large to save locally. Try a smaller background image.', false);
+          return;
+        }
+        updateBibleBackgroundStatus();
+        showBibleLibraryFlash('Bible background selected: ' + (file.name || 'custom image') + '.', false, true);
+        if (staged && staged.type === 'bible' && staged.value) {
+          staged.value.backgroundSource = getSelectedBibleBackgroundSource();
+          renderPreview();
+        }
+        if (liveState && liveState.type === 'bible' && liveState.value) {
+          liveState.value.backgroundSource = getSelectedBibleBackgroundSource();
+          renderLiveView();
+        }
+      };
+      reader.readAsDataURL(file);
+      if (event.target) event.target.value = '';
+    }
+
+    async function clearBibleObjectStore() {
+      const db = await openBibleDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction('bibles', 'readwrite');
+        tx.objectStore('bibles').clear();
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      });
+    }
+
+    async function resetBibleLibraries() {
+      const res = await showModal('Reset Bible Library', 'This will remove all Bible files saved locally in this browser. Continue?', false);
+      if (!res || !res.confirmed) return;
+      await clearBibleObjectStore();
+      bibleLibraries = {};
+      activeBibleKey = '';
+      currentBibleSearchResult = null;
+      const input = document.getElementById('bible-file-uploader');
+      if (input) input.value = '';
+      const suggestions = document.getElementById('bible-suggestions');
+      if (suggestions) suggestions.innerHTML = '';
+      populateBibleLibrarySelector();
+      renderBibleSearchResult('Bible libraries saved locally were reset. Choose a file and click Accept to import again.');
+    }
+
+    const bibleToolsOriginalBibleResultToPayload = bibleResultToPayload;
+    bibleResultToPayload = function(result, bible) {
+      const payload = bibleToolsOriginalBibleResultToPayload(result, bible);
+      payload.backgroundSource = getSelectedBibleBackgroundSource();
+      return payload;
+    };
+
+    const bibleToolsOriginalChangeBackgroundTarget = changeBackgroundTarget;
+    changeBackgroundTarget = function(filename) {
+      bibleToolsOriginalChangeBackgroundTarget(filename);
+      updateBibleBackgroundStatus();
+    };
+
+    async function renderAudienceDissolve(payload) {
+      const audienceTarget = document.getElementById('audience-view');
+      if (!audienceTarget) return;
+      const oldChildren = Array.from(audienceTarget.children).filter(el => el.id !== 'audience-bg-layer');
+      const oldLayer = document.createElement('div');
+      oldLayer.className = 'dissolve-old-layer';
+      oldChildren.forEach(el => oldLayer.appendChild(el.cloneNode(true)));
+      if (oldChildren.length) audienceTarget.appendChild(oldLayer);
+      await renderAudience(payload);
+      requestAnimationFrame(() => oldLayer.classList.add('dissolve-out'));
+      setTimeout(() => { if (oldLayer && oldLayer.parentNode) oldLayer.remove(); }, 760);
+    }
+
+    const bibleToolsOriginalPopulateBibleLibrarySelector = populateBibleLibrarySelector;
+    populateBibleLibrarySelector = function() {
+      bibleToolsOriginalPopulateBibleLibrarySelector();
+      updateBibleBackgroundStatus();
+    };
+
+
+    /* Firebase Bible-only cloud save. This intentionally saves only Bible library objects, not scenes, media, backgrounds, UI settings, or other presenter data. */
+    const FIREBASE_BIBLE_ROOT_URL = 'https://biblelibrary-42031-default-rtdb.firebaseio.com/';
+    const FIREBASE_BIBLE_COLLECTION = 'bibles';
+
+    function getFirebaseBibleCollectionUrl() {
+      return FIREBASE_BIBLE_ROOT_URL.replace(/\/+$/, '') + '/' + FIREBASE_BIBLE_COLLECTION;
+    }
+
+    function getFirebaseBibleItemUrl(key) {
+      return getFirebaseBibleCollectionUrl() + '/' + encodeURIComponent(String(key || 'imported_bible')) + '.json';
+    }
+
+    function setBibleFirebaseStatus(message, isError = false) {
+      const el = document.getElementById('bible-firebase-status');
+      if (el) {
+        el.textContent = message;
+        el.style.color = isError ? 'var(--accent-red)' : 'var(--text-muted)';
+        el.style.borderColor = isError ? 'rgba(230, 57, 70, 0.55)' : 'var(--border)';
+      }
+      showBibleLibraryFlash(message, isError, true);
+    }
+
+    function makeFirebaseBiblePayload(key, bible) {
+      const cleanEntries = (bible && Array.isArray(bible.entries) ? bible.entries : []).map((entry) => ({
+        book: String(entry.book || ''),
+        chapter: Number(entry.chapter) || 1,
+        verse: Number(entry.verse) || 1,
+        text: String(entry.text || ''),
+        reference: String(entry.reference || buildBibleReference(entry.book, entry.chapter, entry.verse)),
+        sourceLabel: String(entry.sourceLabel || bible.label || key || '')
+      }));
+      return {
+        key: String(key || ''),
+        label: String((bible && bible.label) || key || ''),
+        entries: cleanEntries,
+        verseCount: cleanEntries.length,
+        updatedAt: new Date().toISOString(),
+        savedBy: 'JIL TAGUIG PRESENTER Bible Library'
+      };
+    }
+
+    async function saveBibleLibraryToFirebase(key, bible) {
+      if (String(key || '').startsWith('api:') || (bible && bible.apiMode)) {
+        setBibleFirebaseStatus('Firebase: skipped online API Bible. Only chosen local files/folders are saved.');
+        return { saved: false, skipped: true, reason: 'api Bible is live only' };
+      }
+      if (!key || !bible || !Array.isArray(bible.entries) || !bible.entries.length) return { saved: false, reason: 'empty Bible library' };
+      const payload = makeFirebaseBiblePayload(key, bible);
+      const response = await fetch(getFirebaseBibleItemUrl(key), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) throw new Error('Firebase rejected the Bible save (' + response.status + ')');
+      return { saved: true, verseCount: payload.verseCount };
+    }
+
+    async function loadBibleLibrariesFromFirebase() {
+      try {
+        const response = await fetch(getFirebaseBibleCollectionUrl() + '.json', { method: 'GET' });
+        if (!response.ok) throw new Error('Firebase read failed (' + response.status + ')');
+        const data = await response.json();
+        if (!data || typeof data !== 'object') {
+          setBibleFirebaseStatus('Firebase: no Bible libraries found yet.');
+          return 0;
+        }
+        let loadedCount = 0;
+        for (const key of Object.keys(data)) {
+          const bible = data[key];
+          if (!bible || !Array.isArray(bible.entries) || !bible.entries.length) continue;
+          const fixedEntries = fixBibleEntryBookNames(bible.entries);
+          bibleLibraries[key] = {
+            key,
+            label: bible.label || key,
+            entries: fixedEntries
+          };
+          await saveBibleLibraryToDB(key, bibleLibraries[key]);
+          loadedCount += 1;
+        }
+        if (!activeBibleKey && Object.keys(bibleLibraries).length) activeBibleKey = Object.keys(bibleLibraries)[0];
+        if (loadedCount) setBibleFirebaseStatus('Firebase: loaded ' + loadedCount + ' Bible librar' + (loadedCount === 1 ? 'y' : 'ies') + '.');
+        else setBibleFirebaseStatus('Firebase: no readable Bible libraries found.');
+        return loadedCount;
+      } catch (error) {
+        setBibleFirebaseStatus('Firebase: cloud load skipped - ' + (error && error.message ? error.message : 'connection blocked'), true);
+        return 0;
+      }
+    }
+
+    const firebaseOriginalImportBibleFileObject = importBibleFileObject;
+    importBibleFileObject = async function(file) {
+      const result = await firebaseOriginalImportBibleFileObject(file);
+      if (result && result.imported && result.key && bibleLibraries[result.key]) {
+        try {
+          setBibleFirebaseStatus('Firebase: saving Bible only...');
+          const cloudResult = await saveBibleLibraryToFirebase(result.key, bibleLibraries[result.key]);
+          result.firebaseSaved = true;
+          setBibleFirebaseStatus('Firebase: saved Bible only (' + (cloudResult.verseCount || bibleLibraries[result.key].entries.length) + ' verses).');
+        } catch (error) {
+          result.firebaseSaved = false;
+          result.firebaseReason = error && error.message ? error.message : 'cloud save failed';
+          setBibleFirebaseStatus('Firebase: Bible cloud save failed - ' + result.firebaseReason, true);
+        }
+      }
+      return result;
+    };
+
+    const firebaseOriginalLoadBibleLibrariesFromStorage = loadBibleLibrariesFromStorage;
+    loadBibleLibrariesFromStorage = async function() {
+      await firebaseOriginalLoadBibleLibrariesFromStorage();
+      await loadBibleLibrariesFromFirebase();
+    };
+
+
+    window.addEventListener('resize', fitAllBibleCardsSoon);
+
     window.addEventListener('DOMContentLoaded', async () => {
       // Check for user theme preferences on load
       const savedTheme = localStorage.getItem('mps_theme_mode');
@@ -2587,6 +4601,663 @@
         setSlideStatus();
       }
     });
-  </script>
+  
+
+    /* Bible live verse navigation: use arrows in the operator Live View to move to previous/next verse and sync the extended display. */
+    function getBiblePayloadMeta(payload) {
+      const value = payload && payload.value ? payload.value : {};
+      const reference = String(value.reference || (payload && payload.name) || '').trim();
+      let book = value.book || payload.book || '';
+      let chapter = parseInt(value.chapter || payload.chapter || '', 10);
+      let verse = parseInt(value.verse || payload.verse || '', 10);
+
+      if ((!book || !Number.isFinite(chapter) || !Number.isFinite(verse)) && reference) {
+        const match = reference.match(/^(.+?)\s+(\d+)\s*[:.]\s*(\d+)/);
+        if (match) {
+          book = book || match[1].trim();
+          chapter = Number.isFinite(chapter) ? chapter : parseInt(match[2], 10);
+          verse = Number.isFinite(verse) ? verse : parseInt(match[3], 10);
+        }
+      }
+
+      return {
+        bibleKey: value.bibleKey || payload.bibleKey || activeBibleKey || '',
+        book: canonicalBibleBookName(book),
+        chapter: Number.isFinite(chapter) ? chapter : null,
+        verse: Number.isFinite(verse) ? verse : null
+      };
+    }
+
+    function getOrderedBibleEntriesForKey(key) {
+      const bible = key && bibleLibraries[key] ? bibleLibraries[key] : (activeBibleKey && bibleLibraries[activeBibleKey] ? bibleLibraries[activeBibleKey] : null);
+      if (!bible || !Array.isArray(bible.entries)) return [];
+      const order = {};
+      if (typeof BIBLE_BOOK_CANONICAL_NAMES !== 'undefined') {
+        BIBLE_BOOK_CANONICAL_NAMES.forEach((name, index) => { order[normalizeBibleBookName(name)] = index + 1; });
+      }
+      return bible.entries.slice().sort((a, b) => {
+        const ao = order[normalizeBibleBookName(canonicalBibleBookName(a.book))] || 999;
+        const bo = order[normalizeBibleBookName(canonicalBibleBookName(b.book))] || 999;
+        if (ao !== bo) return ao - bo;
+        if ((Number(a.chapter) || 0) !== (Number(b.chapter) || 0)) return (Number(a.chapter) || 0) - (Number(b.chapter) || 0);
+        return (Number(a.verse) || 0) - (Number(b.verse) || 0);
+      });
+    }
+
+    function getAdjacentBibleEntryFromPayload(payload, delta) {
+      const meta = getBiblePayloadMeta(payload);
+      const entries = getOrderedBibleEntriesForKey(meta.bibleKey);
+      if (!entries.length || !meta.book || !meta.chapter || !meta.verse) return null;
+      const normalizedBook = normalizeBibleBookName(canonicalBibleBookName(meta.book));
+      const index = entries.findIndex(entry =>
+        normalizeBibleBookName(canonicalBibleBookName(entry.book)) === normalizedBook &&
+        Number(entry.chapter) === Number(meta.chapter) &&
+        Number(entry.verse) === Number(meta.verse)
+      );
+      if (index < 0) return null;
+      return entries[index + delta] || null;
+    }
+
+    function makeBiblePayloadFromEntry(entry, bibleKey) {
+      const bible = bibleKey && bibleLibraries[bibleKey] ? bibleLibraries[bibleKey] : (activeBibleKey && bibleLibraries[activeBibleKey] ? bibleLibraries[activeBibleKey] : null);
+      const result = {
+        book: canonicalBibleBookName(entry.book),
+        chapter: Number(entry.chapter) || 1,
+        verse: Number(entry.verse) || 1,
+        reference: buildBibleReference(canonicalBibleBookName(entry.book), Number(entry.chapter) || 1, Number(entry.verse) || 1),
+        text: String(entry.text || ''),
+        sourceLabel: entry.sourceLabel || (bible ? bible.label : '')
+      };
+      const payloadValue = bibleResultToPayload(result, bible);
+      payloadValue.book = result.book;
+      payloadValue.chapter = result.chapter;
+      payloadValue.verse = result.verse;
+      payloadValue.bibleKey = bibleKey || activeBibleKey || '';
+      return {
+        type: 'bible',
+        value: payloadValue,
+        name: result.reference,
+        category: bible ? (bible.label || bibleKey || activeBibleKey || 'Bible') : 'Bible',
+        sceneItemIndex: -1,
+        page: 1,
+        videoTime: 0,
+        videoPlaying: false
+      };
+    }
+
+    function canNavigateLiveBible(delta) {
+      if (!liveState || liveState.type !== 'bible') return false;
+      return Boolean(getAdjacentBibleEntryFromPayload(liveState, delta));
+    }
+
+    async function navigateLiveBibleVerse(delta) {
+      if (!liveState || liveState.type !== 'bible') return;
+      const meta = getBiblePayloadMeta(liveState);
+      const nextEntry = getAdjacentBibleEntryFromPayload(liveState, delta);
+      if (!nextEntry) return;
+      const nextPayload = makeBiblePayloadFromEntry(nextEntry, meta.bibleKey || activeBibleKey);
+      liveState = JSON.parse(JSON.stringify(nextPayload));
+      currentBibleSearchResult = {
+        book: nextPayload.value.book,
+        chapter: nextPayload.value.chapter,
+        verse: nextPayload.value.verse,
+        reference: nextPayload.value.reference,
+        text: nextPayload.value.text,
+        sourceLabel: nextPayload.value.category
+      };
+      const searchInput = document.getElementById('bible-search-input');
+      if (searchInput) searchInput.value = nextPayload.value.reference || nextPayload.name || '';
+      renderBibleSearchResult();
+      await renderLiveView();
+      channel.postMessage({ command: 'UPDATE_LIVE_BIBLE_VERSE', payload: liveState });
+    }
+
+    function removeBibleLiveNavigation(target) {
+      if (!target) return;
+      target.querySelectorAll('.bible-live-nav').forEach(el => el.remove());
+    }
+
+    function addBibleLiveNavigation(target, payload) {
+      if (!target || target.id !== 'live-viewport' || !payload || payload.type !== 'bible') return;
+      removeBibleLiveNavigation(target);
+      const nav = document.createElement('div');
+      nav.className = 'bible-live-nav';
+      const prev = document.createElement('button');
+      prev.type = 'button';
+      prev.setAttribute('aria-label', 'Previous Bible verse');
+      prev.innerHTML = '&#8249;';
+      prev.disabled = !canNavigateLiveBible(-1);
+      prev.onclick = (event) => { event.stopPropagation(); navigateLiveBibleVerse(-1); };
+      const next = document.createElement('button');
+      next.type = 'button';
+      next.setAttribute('aria-label', 'Next Bible verse');
+      next.innerHTML = '&#8250;';
+      next.disabled = !canNavigateLiveBible(1);
+      next.onclick = (event) => { event.stopPropagation(); navigateLiveBibleVerse(1); };
+      const hint = document.createElement('div');
+      hint.className = 'bible-live-nav-label';
+      hint.textContent = 'Verse navigation';
+      nav.appendChild(prev);
+      nav.appendChild(next);
+      nav.appendChild(hint);
+      target.appendChild(nav);
+    }
+
+    const bibleNavOriginalRenderMediaIntoViewport = renderMediaIntoViewport;
+    renderMediaIntoViewport = async function(target, payload, options = {}) {
+      const result = await bibleNavOriginalRenderMediaIntoViewport(target, payload, options);
+      if (target && target.id === 'live-viewport') {
+        removeBibleLiveNavigation(target);
+        if (payload && payload.type === 'bible') addBibleLiveNavigation(target, payload);
+      }
+      return result;
+    };
+
+    const bibleNavOriginalBibleResultToPayload = bibleResultToPayload;
+    bibleResultToPayload = function(result, bible) {
+      const payload = bibleNavOriginalBibleResultToPayload(result, bible);
+      payload.book = canonicalBibleBookName(result.book);
+      payload.chapter = Number(result.chapter) || 1;
+      payload.verse = Number(result.verse) || 1;
+      payload.bibleKey = (bible && bible.key) || activeBibleKey || '';
+      return payload;
+    };
+
+    channel.addEventListener('message', async (event) => {
+      const msg = event.data;
+      if (!msg || msg.command !== 'UPDATE_LIVE_BIBLE_VERSE') return;
+      lastIncoming = msg.payload;
+      if (document.body.classList.contains('live-window-mode')) {
+        await renderAudience(msg.payload);
+      }
+    });
+
+
+    /* Online Bible API integration: Free Use Bible API (AO Lab). This uses live API reads only and does not save API Bible text to Firebase. */
+    const HELLOAO_BIBLE_API_BASE = 'https://bible.helloao.org/api';
+    let bibleApiTranslations = [];
+    let bibleApiBooksCache = {};
+    let bibleApiChapterCache = {};
+
+    function setBibleApiStatus(message, isError = false) {
+      const el = document.getElementById('bible-api-status');
+      if (el) {
+        el.textContent = message;
+        el.style.color = isError ? 'var(--accent-red)' : 'var(--text-muted)';
+        el.style.borderColor = isError ? 'rgba(230, 57, 70, 0.55)' : 'var(--border)';
+      }
+      showBibleLibraryFlash(message, isError, true);
+    }
+
+    function injectBibleApiControls() {
+      const firebaseStatus = document.getElementById('bible-firebase-status');
+      if (!firebaseStatus || document.getElementById('bible-api-row')) return;
+      firebaseStatus.textContent = '';
+
+      const apiRow = document.createElement('div');
+      apiRow.id = 'bible-api-row';
+      apiRow.className = 'bible-tool-row';
+      apiRow.style.display = 'grid';
+      apiRow.style.gridTemplateColumns = '1fr auto auto';
+      apiRow.style.gap = '8px';
+      apiRow.style.alignItems = 'center';
+      apiRow.innerHTML = `
+        <select id="bible-api-version-select" style="margin-bottom:0; min-width: 180px;">
+          <option value="">Online Bible API: English/Tagalog only</option>
+        </select>
+        <button type="button" class="bible-tool-btn" onclick="loadBibleApiTranslations()">🌐 Load Versions</button>
+        <button type="button" class="bible-tool-btn accept" onclick="activateSelectedBibleApiVersion()">Use API</button>
+      `;
+      const apiStatus = document.createElement('div');
+      apiStatus.id = 'bible-api-status';
+      apiStatus.className = 'bible-background-status bible-library-hidden-status';
+      apiStatus.textContent = '';
+      firebaseStatus.insertAdjacentElement('afterend', apiStatus);
+      apiStatus.insertAdjacentElement('beforebegin', apiRow);
+    }
+
+    function collectBibleApiTranslations(data, out = []) {
+      if (!data) return out;
+      if (Array.isArray(data)) {
+        data.forEach(item => collectBibleApiTranslations(item, out));
+        return out;
+      }
+      if (typeof data !== 'object') return out;
+      if (data.id && (data.name || data.englishName || data.shortName)) {
+        out.push(data);
+      }
+      Object.keys(data).forEach(key => {
+        if (key === 'translation') return;
+        const value = data[key];
+        if (value && typeof value === 'object') collectBibleApiTranslations(value, out);
+      });
+      return out;
+    }
+
+    function isEnglishOrTagalogBibleApiTranslation(translation) {
+      if (!translation) return false;
+      const languageText = [
+        translation.languageEnglishName,
+        translation.languageName,
+        translation.language,
+        translation.languageCode,
+        translation.languageId,
+        translation.lang,
+        translation.iso,
+        translation.iso6393
+      ].filter(Boolean).join(' ').toLowerCase();
+      const idText = String(translation.id || '').toLowerCase();
+      const nameText = [translation.shortName, translation.name, translation.englishName].filter(Boolean).join(' ').toLowerCase();
+      const combined = (languageText + ' ' + idText + ' ' + nameText).replace(/[_-]+/g, ' ');
+
+      const isEnglish = /\benglish\b/.test(combined) || /\beng\b/.test(combined) || idText === 'eng' || idText.startsWith('eng-');
+      const isTagalog = /\btagalog\b/.test(combined) || /\bfilipino\b/.test(combined) || /\bpilipino\b/.test(combined) || /\btgl\b/.test(combined) || /\bfil\b/.test(combined) || idText === 'tgl' || idText === 'fil' || idText.startsWith('tgl-') || idText.startsWith('fil-');
+      return isEnglish || isTagalog;
+    }
+
+    async function loadBibleApiTranslations() {
+      injectBibleApiControls();
+      const select = document.getElementById('bible-api-version-select');
+      try {
+        setBibleApiStatus('Online Bible API: loading English and Tagalog versions only...');
+        if (select) select.innerHTML = '<option value="">Loading versions...</option>';
+        const response = await fetch(HELLOAO_BIBLE_API_BASE + '/available_translations.json', { method: 'GET' });
+        if (!response.ok) throw new Error('API returned ' + response.status);
+        const data = await response.json();
+        const seen = new Set();
+        bibleApiTranslations = collectBibleApiTranslations(data)
+          .filter(t => t && t.id && isEnglishOrTagalogBibleApiTranslation(t) && !seen.has(String(t.id)) && seen.add(String(t.id)))
+          .sort((a, b) => String(a.languageEnglishName || a.languageName || '').localeCompare(String(b.languageEnglishName || b.languageName || '')) || String(a.englishName || a.name || a.id).localeCompare(String(b.englishName || b.name || b.id)));
+
+        if (!bibleApiTranslations.length) throw new Error('No English or Tagalog versions found');
+        if (select) {
+          select.innerHTML = '<option value="">Choose English or Tagalog API Bible Version</option>';
+          bibleApiTranslations.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            const lang = t.languageEnglishName || t.languageName || t.language || '';
+            const short = t.shortName || t.id;
+            opt.textContent = `${short} — ${t.englishName || t.name || t.id}${lang ? ' (' + lang + ')' : ''}`;
+            select.appendChild(opt);
+          });
+          const bsb = Array.from(select.options).find(o => o.value === 'BSB');
+          if (bsb) select.value = 'BSB';
+        }
+        setBibleApiStatus('Online Bible API: loaded ' + bibleApiTranslations.length + ' English/Tagalog version' + (bibleApiTranslations.length === 1 ? '' : 's') + '. Choose one and click Use API.');
+      } catch (error) {
+        if (select) select.innerHTML = '<option value="">Unable to load API versions</option>';
+        setBibleApiStatus('Online Bible API: failed to load versions - ' + (error && error.message ? error.message : 'network error'), true);
+      }
+    }
+
+    function getBibleApiTranslationInfo(id) {
+      return bibleApiTranslations.find(t => String(t.id) === String(id)) || { id, shortName: id, name: id, englishName: id };
+    }
+
+    async function fetchBibleApiBooks(translationId) {
+      if (bibleApiBooksCache[translationId]) return bibleApiBooksCache[translationId];
+      const response = await fetch(`${HELLOAO_BIBLE_API_BASE}/${encodeURIComponent(translationId)}/books.json`, { method: 'GET' });
+      if (!response.ok) throw new Error('Books API returned ' + response.status);
+      const data = await response.json();
+      const books = Array.isArray(data.books) ? data.books : [];
+      bibleApiBooksCache[translationId] = books;
+      const key = 'api:' + translationId;
+      if (bibleLibraries[key]) bibleLibraries[key].books = books;
+      return books;
+    }
+
+    async function activateSelectedBibleApiVersion() {
+      injectBibleApiControls();
+      const select = document.getElementById('bible-api-version-select');
+      const translationId = select && select.value ? select.value : '';
+      if (!translationId) {
+        setBibleApiStatus('Online Bible API: choose a version first.');
+        return;
+      }
+      const info = getBibleApiTranslationInfo(translationId);
+      const key = 'api:' + translationId;
+      const label = (info.shortName || info.id || translationId) + ' API';
+      bibleLibraries[key] = {
+        key,
+        label,
+        entries: [],
+        books: bibleApiBooksCache[translationId] || [],
+        apiMode: true,
+        translationId,
+        translationInfo: info
+      };
+      activeBibleKey = key;
+      currentBibleSearchResult = null;
+      populateBibleLibrarySelector();
+      const librarySelect = document.getElementById('bible-language-select');
+      if (librarySelect) librarySelect.value = key;
+      renderBibleSearchResult();
+      try {
+        setBibleApiStatus('Online Bible API: loading books for ' + label + '...');
+        await fetchBibleApiBooks(translationId);
+        setBibleApiStatus('Online Bible API: using ' + label + ' (English/Tagalog filter). Type a book, chapter, verse, or phrase. API verses are not saved to Firebase.');
+        updateBibleSuggestions();
+      } catch (error) {
+        setBibleApiStatus('Online Bible API: failed to load books - ' + (error && error.message ? error.message : 'network error'), true);
+      }
+    }
+
+    function isActiveBibleApiMode() {
+      return Boolean(activeBibleKey && bibleLibraries[activeBibleKey] && bibleLibraries[activeBibleKey].apiMode);
+    }
+
+    function getActiveBibleApiLibrary() {
+      return isActiveBibleApiMode() ? bibleLibraries[activeBibleKey] : null;
+    }
+
+    const apiOriginalPopulateBibleLibrarySelector = populateBibleLibrarySelector;
+    populateBibleLibrarySelector = function() {
+      apiOriginalPopulateBibleLibrarySelector();
+      const select = document.getElementById('bible-language-select');
+      if (!select) return;
+      Array.from(select.options).forEach(opt => {
+        if (String(opt.value).startsWith('api:') && !String(opt.textContent).includes('🌐')) opt.textContent = '🌐 ' + opt.textContent;
+      });
+    };
+
+    function normalizeApiBookInput(value) {
+      return normalizeBibleBookName(canonicalBibleBookName(value));
+    }
+
+    function findBibleApiBook(raw, books) {
+      const wanted = normalizeApiBookInput(raw);
+      if (!wanted) return null;
+      return (books || []).find(book => {
+        const names = [book.id, book.name, book.commonName, book.title].filter(Boolean);
+        return names.some(name => normalizeApiBookInput(name) === wanted || normalizeApiBookInput(name).includes(wanted) || wanted.includes(normalizeApiBookInput(name)));
+      }) || null;
+    }
+
+    function stringifyApiContentPart(part) {
+      if (part === null || part === undefined) return '';
+      if (typeof part === 'string' || typeof part === 'number') return String(part);
+      if (Array.isArray(part)) return part.map(stringifyApiContentPart).join(' ');
+      if (typeof part !== 'object') return '';
+      if (part.lineBreak) return ' ';
+      if (part.text) return String(part.text);
+      if (part.heading) return '';
+      if (part.content) return stringifyApiContentPart(part.content);
+      return '';
+    }
+
+    function apiChapterToEntries(chapterData, translationId) {
+      const book = chapterData.book || {};
+      const chapterNumber = Number(chapterData.chapter && chapterData.chapter.number) || Number(chapterData.number) || 1;
+      const content = chapterData.chapter && Array.isArray(chapterData.chapter.content) ? chapterData.chapter.content : [];
+      const bookName = book.commonName || book.name || book.id || 'Bible';
+      return content
+        .filter(item => item && item.type === 'verse')
+        .map(item => {
+          const verseNumber = Number(item.number) || 1;
+          const text = stringifyApiContentPart(item.content).replace(/\s+/g, ' ').trim();
+          return {
+            book: bookName,
+            bookId: book.id || '',
+            chapter: chapterNumber,
+            verse: verseNumber,
+            text,
+            reference: buildBibleReference(bookName, chapterNumber, verseNumber),
+            sourceLabel: translationId,
+            apiMode: true,
+            bibleKey: 'api:' + translationId
+          };
+        })
+        .filter(entry => entry.text);
+    }
+
+    async function fetchBibleApiChapter(translationId, bookId, chapter) {
+      const cacheKey = `${translationId}|${bookId}|${chapter}`;
+      if (bibleApiChapterCache[cacheKey]) return bibleApiChapterCache[cacheKey];
+      const response = await fetch(`${HELLOAO_BIBLE_API_BASE}/${encodeURIComponent(translationId)}/${encodeURIComponent(bookId)}/${encodeURIComponent(chapter)}.json`, { method: 'GET' });
+      if (!response.ok) throw new Error('Chapter API returned ' + response.status);
+      const data = await response.json();
+      const entries = apiChapterToEntries(data, translationId);
+      bibleApiChapterCache[cacheKey] = entries;
+      const lib = bibleLibraries['api:' + translationId];
+      if (lib) {
+        const existing = new Set((lib.entries || []).map(e => `${normalizeBibleBookName(e.book)}|${e.chapter}|${e.verse}`));
+        entries.forEach(e => {
+          const key = `${normalizeBibleBookName(e.book)}|${e.chapter}|${e.verse}`;
+          if (!existing.has(key)) {
+            existing.add(key);
+            lib.entries.push(e);
+          }
+        });
+      }
+      return entries;
+    }
+
+    async function buildBibleApiSuggestions(query) {
+      const lib = getActiveBibleApiLibrary();
+      if (!lib) return [];
+      const raw = String(query || '').trim().replace(/\s+/g, ' ');
+      if (!raw) return [];
+      const books = lib.books && lib.books.length ? lib.books : await fetchBibleApiBooks(lib.translationId);
+      const ref = getReferencePartsForLooseQuery(raw);
+      const suggestions = [];
+      const seen = new Set();
+      const add = (label, value, entry) => {
+        const key = label + '|' + value;
+        if (seen.has(key)) return;
+        seen.add(key);
+        suggestions.push({ label, value, entry });
+      };
+
+      if (ref && ref.book && ref.chapter) {
+        const book = findBibleApiBook(ref.book, books);
+        if (book) {
+          try {
+            const verses = await fetchBibleApiChapter(lib.translationId, book.id, ref.chapter);
+            verses
+              .filter(v => ref.verse === null || String(v.verse).startsWith(String(ref.verse)))
+              .slice(0, 30)
+              .forEach(v => add(`${v.reference} — ${v.text.slice(0, 90)}`, v.reference, v));
+          } catch (e) {
+            add('Unable to load chapter from API. Try another reference.', raw, null);
+          }
+          return suggestions;
+        }
+      }
+
+      const q = normalizeBibleBookName(raw);
+      books
+        .filter(book => [book.name, book.commonName, book.title, book.id].filter(Boolean).some(name => normalizeBibleBookName(name).includes(q)))
+        .slice(0, 12)
+        .forEach(book => add(`${book.commonName || book.name} — ${book.numberOfChapters || '?'} chapters`, `${book.commonName || book.name} `, null));
+
+      (lib.entries || [])
+        .filter(entry => (`${entry.reference} ${entry.text}`).toLowerCase().includes(raw.toLowerCase()))
+        .slice(0, 15)
+        .forEach(entry => add(`${entry.reference} — ${entry.text.slice(0, 90)}`, entry.reference, entry));
+
+      return suggestions.slice(0, 25);
+    }
+
+    const apiOriginalUpdateBibleSuggestions = updateBibleSuggestions;
+    updateBibleSuggestions = async function() {
+      if (!isActiveBibleApiMode()) return apiOriginalUpdateBibleSuggestions();
+      const input = document.getElementById('bible-search-input');
+      const box = document.getElementById('bible-suggestions');
+      if (!input || !box) return;
+      const queryAtStart = input.value;
+      try {
+        bibleSuggestionItems = await buildBibleApiSuggestions(queryAtStart);
+      } catch (error) {
+        bibleSuggestionItems = [];
+        setBibleApiStatus('Online Bible API: suggestion error - ' + (error && error.message ? error.message : 'network error'), true);
+      }
+      if (input.value !== queryAtStart) return;
+      bibleSuggestionIndex = -1;
+      if (!bibleSuggestionItems.length) { box.style.display = 'none'; box.innerHTML = ''; return; }
+      box.innerHTML = bibleSuggestionItems.map((item, idx) => `<button type="button" class="bible-suggestion-item" data-index="${idx}">${escapeHtml(item.label)}</button>`).join('');
+      box.style.display = 'block';
+      Array.from(box.querySelectorAll('.bible-suggestion-item')).forEach(btn => {
+        btn.onclick = () => selectBibleSuggestion(parseInt(btn.getAttribute('data-index'), 10));
+      });
+    };
+
+    const apiOriginalSearchBibleVerse = searchBibleVerse;
+    searchBibleVerse = async function() {
+      if (!isActiveBibleApiMode()) return apiOriginalSearchBibleVerse();
+      const input = document.getElementById('bible-search-input');
+      const query = input ? input.value : '';
+      const parsed = normalizeBibleSearchQuery(query);
+      const lib = getActiveBibleApiLibrary();
+      const suggestionsBox = document.getElementById('bible-suggestions');
+      if (suggestionsBox) suggestionsBox.style.display = 'none';
+      if (!lib) return;
+
+      try {
+        const books = lib.books && lib.books.length ? lib.books : await fetchBibleApiBooks(lib.translationId);
+        let matches = [];
+        if (parsed) {
+          const book = findBibleApiBook(parsed.book, books);
+          if (!book) {
+            currentBibleSearchResult = null;
+            renderBibleSearchResult('No API book match yet. Keep typing and choose from suggestions.');
+            return;
+          }
+          setBibleApiStatus('Online Bible API: fetching ' + (book.commonName || book.name) + ' ' + parsed.chapter + '...');
+          const verses = await fetchBibleApiChapter(lib.translationId, book.id, parsed.chapter);
+          matches = verses.filter(entry => entry.verse >= parsed.verse && entry.verse <= (parsed.endVerse || parsed.verse));
+        }
+
+        if (!matches.length) {
+          const suggestions = await buildBibleApiSuggestions(query);
+          const first = suggestions.find(item => item.entry);
+          if (first && first.entry) {
+            matches = [first.entry];
+            if (input) input.value = first.entry.reference;
+          }
+        }
+
+        if (!matches.length) {
+          currentBibleSearchResult = null;
+          renderBibleSearchResult('No API result yet. Type a reference like Genesis 1:1 or choose from suggestions.');
+          updateBibleSuggestions();
+          return;
+        }
+
+        currentBibleSearchResult = {
+          book: matches[0].book,
+          chapter: matches[0].chapter,
+          verse: matches[0].verse,
+          reference: matches.length > 1 ? `${matches[0].book} ${matches[0].chapter}:${matches[0].verse}-${matches[matches.length - 1].verse}` : matches[0].reference,
+          text: matches.map(m => m.text).join(' '),
+          sourceLabel: lib.label,
+          apiMode: true,
+          bibleKey: activeBibleKey
+        };
+        setBibleApiStatus('Online Bible API: loaded ' + currentBibleSearchResult.reference + '. Nothing was saved to Firebase.');
+        renderBibleSearchResult();
+      } catch (error) {
+        currentBibleSearchResult = null;
+        renderBibleSearchResult('API lookup failed: ' + (error && error.message ? error.message : 'network error'));
+        setBibleApiStatus('Online Bible API: lookup failed - ' + (error && error.message ? error.message : 'network error'), true);
+      }
+    };
+
+    const apiOriginalRenderBibleSearchResult = renderBibleSearchResult;
+    renderBibleSearchResult = function(message = '') {
+      if (!isActiveBibleApiMode()) return apiOriginalRenderBibleSearchResult(message);
+      const resultBox = document.getElementById('bible-search-result');
+      if (!resultBox) return;
+      if (message) { resultBox.innerHTML = `<div style="color: var(--accent-red);">${escapeHtml(message)}</div>`; return; }
+      const lib = getActiveBibleApiLibrary();
+      if (!currentBibleSearchResult) {
+        resultBox.innerHTML = `<div style="color: var(--text-muted);">${escapeHtml(lib.label)} online API mode is active. Type freely to search; verses are fetched live and are not saved to Firebase.</div>`;
+        return;
+      }
+      resultBox.innerHTML = `
+        <div style="font-weight: 700; color: var(--text);">${escapeHtml(currentBibleSearchResult.reference)}</div>
+        <div style="margin-top: 6px; color: var(--text-muted);">${escapeHtml(currentBibleSearchResult.text)}</div>
+      `;
+    };
+
+    const apiOriginalBibleResultToPayload = bibleResultToPayload;
+    bibleResultToPayload = function(result, bible) {
+      const payload = apiOriginalBibleResultToPayload(result, bible);
+      if (result && result.apiMode) {
+        payload.apiMode = true;
+        payload.book = result.book;
+        payload.chapter = Number(result.chapter) || 1;
+        payload.verse = Number(result.verse) || 1;
+        payload.bibleKey = result.bibleKey || activeBibleKey || '';
+      }
+      return payload;
+    };
+
+    const apiOriginalCanNavigateLiveBible = canNavigateLiveBible;
+    canNavigateLiveBible = function(delta) {
+      if (liveState && liveState.type === 'bible' && liveState.value && liveState.value.apiMode) return true;
+      return apiOriginalCanNavigateLiveBible(delta);
+    };
+
+    const apiOriginalNavigateLiveBibleVerse = navigateLiveBibleVerse;
+    navigateLiveBibleVerse = async function(delta) {
+      if (!(liveState && liveState.type === 'bible' && liveState.value && liveState.value.apiMode)) return apiOriginalNavigateLiveBibleVerse(delta);
+      const meta = getBiblePayloadMeta(liveState);
+      const lib = bibleLibraries[meta.bibleKey] || getActiveBibleApiLibrary();
+      if (!lib || !lib.apiMode) return;
+      try {
+        const books = lib.books && lib.books.length ? lib.books : await fetchBibleApiBooks(lib.translationId);
+        const book = findBibleApiBook(meta.book, books);
+        if (!book) return;
+        let verses = await fetchBibleApiChapter(lib.translationId, book.id, meta.chapter);
+        let currentIndex = verses.findIndex(v => Number(v.verse) === Number(meta.verse));
+        let nextEntry = verses[currentIndex + delta] || null;
+        if (!nextEntry) {
+          const orderedBooks = books.slice().sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+          const bookIndex = orderedBooks.findIndex(b => b.id === book.id);
+          let nextBook = book;
+          let nextChapter = meta.chapter + delta;
+          if (delta > 0 && nextChapter > Number(book.lastChapterNumber || book.numberOfChapters || meta.chapter)) {
+            nextBook = orderedBooks[bookIndex + 1];
+            nextChapter = nextBook ? Number(nextBook.firstChapterNumber || 1) : null;
+          }
+          if (delta < 0 && nextChapter < Number(book.firstChapterNumber || 1)) {
+            nextBook = orderedBooks[bookIndex - 1];
+            nextChapter = nextBook ? Number(nextBook.lastChapterNumber || nextBook.numberOfChapters || 1) : null;
+          }
+          if (!nextBook || !nextChapter) return;
+          const nextVerses = await fetchBibleApiChapter(lib.translationId, nextBook.id, nextChapter);
+          nextEntry = delta > 0 ? nextVerses[0] : nextVerses[nextVerses.length - 1];
+        }
+        if (!nextEntry) return;
+        const result = {
+          book: nextEntry.book,
+          chapter: nextEntry.chapter,
+          verse: nextEntry.verse,
+          reference: nextEntry.reference,
+          text: nextEntry.text,
+          sourceLabel: lib.label,
+          apiMode: true,
+          bibleKey: lib.key
+        };
+        const payloadValue = bibleResultToPayload(result, lib);
+        liveState = { type: 'bible', value: payloadValue, name: result.reference, category: lib.label, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
+        currentBibleSearchResult = result;
+        const searchInput = document.getElementById('bible-search-input');
+        if (searchInput) searchInput.value = result.reference;
+        renderBibleSearchResult();
+        await renderLiveView();
+        channel.postMessage({ command: 'UPDATE_LIVE_BIBLE_VERSE', payload: liveState });
+      } catch (error) {
+        setBibleApiStatus('Online Bible API: verse navigation failed - ' + (error && error.message ? error.message : 'network error'), true);
+      }
+    };
+
+    /* Firebase is enabled again only for chosen local Bible files/folders. Online API Bible text remains live-only and is not uploaded. */
+    window.addEventListener('DOMContentLoaded', () => {
+      injectBibleApiControls();
+      setBibleFirebaseStatus('Firebase: local file/folder Bible save ready. Online API Bible text is not saved.');
+    });
+
+</script>
 </body>
 </html>
