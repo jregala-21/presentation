@@ -1096,6 +1096,218 @@
       display: none !important;
     }
 
+
+
+    /* Requested UI improvements */
+    .header-brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+    .header-clock {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text);
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 11px;
+      min-width: 92px;
+      text-align: center;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+    }
+    #display-toggle-btn.active {
+      background: var(--accent-red) !important;
+    }
+    #ftg-toggle-btn.active {
+      background: var(--accent-purple) !important;
+      border-color: var(--accent-purple);
+    }
+    .bible-import-summary {
+      color: var(--text-muted);
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 18px;
+    }
+    .bible-import-choice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+    .bible-import-choice {
+      min-height: 96px;
+      flex-direction: column;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-size: 14px;
+    }
+    .bible-import-choice span:first-child {
+      font-size: 26px;
+    }
+    .intro-loading-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      background:
+        radial-gradient(circle at 50% 30%, rgba(0,132,255,0.20), transparent 34%),
+        linear-gradient(145deg, #050507, #11131a 60%, #08090d);
+      color: #fff;
+      opacity: 1;
+      visibility: visible;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
+    }
+    .intro-loading-screen.hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+    .intro-logo-ring {
+      width: 86px;
+      height: 86px;
+      border-radius: 50%;
+      border: 3px solid rgba(255,255,255,0.14);
+      border-top-color: #0084ff;
+      border-right-color: #7033ff;
+      animation: introSpin 1.1s linear infinite;
+      box-shadow: 0 0 30px rgba(0,132,255,0.22);
+    }
+    .intro-title {
+      font-size: clamp(22px, 3vw, 38px);
+      font-weight: 900;
+      letter-spacing: 2px;
+      text-align: center;
+      background: linear-gradient(90deg, #fff, #80bdff, #bda7ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .intro-subtitle {
+      color: rgba(255,255,255,0.60);
+      font-size: 12px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+    .intro-credit {
+      position: absolute;
+      bottom: 22px;
+      font-size: 11px;
+      color: rgba(255,255,255,0.38);
+      letter-spacing: 0.5px;
+    }
+    @keyframes introSpin {
+      to { transform: rotate(360deg); }
+    }
+    @media (max-width: 720px) {
+      .header-brand-wrap { width: 100%; justify-content: space-between; }
+      .bible-import-choice-grid { grid-template-columns: 1fr; }
+    }
+
+    #operator-view {
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+
+    #operator-view .main-layout {
+      height: auto;
+      min-height: 0;
+      flex: 1 1 auto;
+    }
+
+    .app-footer {
+      flex: 0 0 auto;
+      min-height: 32px;
+      padding: 7px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-panel);
+      border-top: 1px solid var(--border);
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-align: center;
+      box-shadow: 0 -2px 10px var(--shadow);
+      z-index: 40;
+    }
+
+    body.live-window-mode .app-footer {
+      display: none;
+    }
+
+
+
+    /* Secondary monitor detection and selection */
+    .monitor-detect-btn {
+      height: 38px;
+      background: var(--bg-surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .monitor-detect-btn.selected {
+      background: rgba(36, 180, 81, 0.16);
+      border-color: var(--accent-green);
+      color: var(--text);
+    }
+    .monitor-list {
+      display: grid;
+      gap: 10px;
+      margin: 16px 0;
+      max-height: 360px;
+      overflow-y: auto;
+    }
+    .monitor-choice {
+      width: 100%;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      background: var(--input-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      text-align: left;
+    }
+    .monitor-choice:hover { border-color: var(--accent-blue); }
+    .monitor-choice.active {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 2px rgba(36, 180, 81, 0.18);
+      background: rgba(36, 180, 81, 0.08);
+    }
+    .monitor-choice-icon { font-size: 26px; }
+    .monitor-choice-info { min-width: 0; }
+    .monitor-choice-name { font-weight: 800; font-size: 14px; color: var(--text); }
+    .monitor-choice-meta { margin-top: 4px; font-size: 12px; color: var(--text-muted); }
+    .monitor-choice-badge {
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .monitor-modal-status {
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(0,132,255,.08);
+      border: 1px solid rgba(0,132,255,.2);
+      color: var(--text-muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
 </style>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -1108,9 +1320,16 @@
   </script>
 </head>
 <body>
+  <div id="intro-loading-screen" class="intro-loading-screen" aria-live="polite">
+    <div class="intro-logo-ring"></div>
+    <div class="intro-title">WELCOME TO JIL TAGUIG PRESENTER</div>
+    <div class="intro-subtitle">Preparing presentation workspace</div>
+    <div class="intro-credit">c: John David Regala</div>
+  </div>
+
   <div id="operator-view">
     <header>
-      <h2>JIL TAGUIG PRESENTER</h2>
+      <div class="header-brand-wrap"><h2>JIL TAGUIG PRESENTER</h2><div id="header-clock" class="header-clock">--:-- --</div></div>
       <div class="row" style="flex-wrap: nowrap;">
         <!-- Theme Toggle Switch Inserted here -->
         <div class="theme-switch-wrapper">
@@ -1124,11 +1343,11 @@
         <select id="header-bg-selector" style="margin-bottom: 0; width: 180px; height: 38px;" onchange="changeBackgroundTarget(this.value)">
           <option value="">-- Choose Background Image --</option>
         </select>
-        <button id="ftg-toggle-btn" class="ftg-btn" style="height: 38px;" onclick="toggleFadeToBackground()">🖼️ Fade To Background</button>
+        <button id="ftg-toggle-btn" class="ftg-btn" style="height: 38px;" onclick="toggleFadeToBackground()">🖼️ Background On</button>
         
         <button id="ftb-toggle-btn" class="ftb-btn" style="height: 38px;" onclick="toggleFadeToBlack()">⚫ Fade To Black</button>
-        <button style="height: 38px;" onclick="openDisplayWindow()">Open Display Screen</button>
-        <button style="height: 38px; background-color: var(--accent-red);" onclick="closeDisplayScreen()">Close Display Screen</button>
+        <button id="monitor-detect-btn" class="monitor-detect-btn" onclick="detectSecondaryMonitors()">🖥️ Detect Monitor</button>
+        <button id="display-toggle-btn" style="height: 38px;" onclick="toggleDisplayScreen()">Open Display Screen</button>
       </div>
     </header>
 
@@ -1226,14 +1445,11 @@
             <h3>Bible Library</h3>
             <div class="bible-controls">
               <div class="bible-file-row bible-tool-row">
-                <div class="bible-file-picker-wrap">
-                  <input type="file" id="bible-file-uploader" accept=".sql,.json,.xml,.txt,.csv,application/json,text/json,text/xml,text/csv,text/plain" multiple style="margin-bottom: 0; flex: 1; min-width: 180px;" onchange="updateBiblePendingFileStatus()">
-                  <input type="file" id="bible-folder-uploader" accept=".sql,.json,.xml,.txt,.csv,application/json,text/json,text/xml,text/csv,text/plain" multiple webkitdirectory directory style="display:none;" onchange="updateBiblePendingFileStatus()">
-                  <button type="button" class="bible-tool-btn folder" onclick="chooseBibleFolderFiles()">📁 Choose Folder</button>
-                </div>
-                <button type="button" class="bible-tool-btn accept" onclick="importBibleFiles()">✅ Accept</button>
+                <button type="button" class="bible-tool-btn accept" style="flex:1;" onclick="openAddBibleModal()">➕ Add Bible</button>
                 <button type="button" class="bible-tool-btn background" onclick="chooseBibleBackgroundImage()">🖼️ Background</button>
                 <button type="button" class="bible-tool-btn reset" onclick="resetBibleLibraries()">↺ Reset</button>
+                <input type="file" id="bible-file-uploader" accept=".sql,.json,.xml,.txt,.csv,application/json,text/json,text/xml,text/csv,text/plain" multiple style="display:none;" onchange="handleBiblePickerSelection('file')">
+                <input type="file" id="bible-folder-uploader" accept=".sql,.json,.xml,.txt,.csv,application/json,text/json,text/xml,text/csv,text/plain" multiple webkitdirectory directory style="display:none;" onchange="handleBiblePickerSelection('folder')">
                 <input type="file" id="bible-background-uploader" accept="image/*" style="display:none;" onchange="handleBibleBackgroundFile(event)">
               </div>
               <div id="bible-pending-file-status" class="bible-background-status bible-library-hidden-status"></div>
@@ -1256,6 +1472,10 @@
         </div>
       </div>
     </div>
+
+    <footer class="app-footer">
+      © JIL Taguig Presenter · Created by John David Regala
+    </footer>
   </div>
 
   <div id="audience-view">
@@ -1270,6 +1490,37 @@
       <div class="modal-footer">
         <button id="modal-cancel-btn" style="background: #444;" onclick="closeModal(false)">Cancel</button>
         <button id="modal-confirm-btn" style="background: var(--accent-blue);" onclick="closeModal(true)">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="monitor-selection-modal" class="modal-overlay" onclick="closeMonitorSelectionModal()">
+    <div class="modal-box" style="max-width:620px;" onclick="event.stopPropagation()">
+      <div class="modal-title">Select Display Monitor</div>
+      <div class="modal-body" style="margin-bottom:10px;">Choose where the presentation display window should open. Your browser may ask permission to manage windows across screens.</div>
+      <div id="monitor-modal-status" class="monitor-modal-status">Click Detect Monitor to scan connected displays.</div>
+      <div id="monitor-list" class="monitor-list"></div>
+      <div class="modal-footer">
+        <button style="background:#444;" onclick="closeMonitorSelectionModal()">Cancel</button>
+        <button id="monitor-use-btn" style="background:var(--accent-green);" onclick="confirmSelectedMonitor()" disabled>Use Selected Monitor</button>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="add-bible-modal" class="modal-overlay" onclick="closeAddBibleModal()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-title">Add Bible Library</div>
+      <div class="bible-import-summary">Choose Bible files or an entire folder. Supported formats: JSON, XML, SQL, TXT, and CSV.</div>
+      <div class="bible-import-choice-grid">
+        <button type="button" class="bible-import-choice" onclick="chooseBibleFiles()"><span>📄</span><span>Choose Files</span></button>
+        <button type="button" class="bible-import-choice" onclick="chooseBibleFolderFiles()"><span>📁</span><span>Choose Folder</span></button>
+      </div>
+      <div id="add-bible-modal-status" class="bible-background-status" style="display:none; margin-bottom:14px;"></div>
+      <div class="modal-footer">
+        <button style="background:#444;" onclick="closeAddBibleModal()">Cancel</button>
+        <button id="add-bible-import-btn" style="background:var(--accent-green);" onclick="importBibleFilesFromModal()">Import Bible</button>
       </div>
     </div>
   </div>
@@ -1301,6 +1552,10 @@
     let staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
     let liveState = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
     let displayWindow = null;
+    let availableDisplayScreens = [];
+    let pendingMonitorIndex = -1;
+    let selectedMonitor = null;
+    const LS_SELECTED_MONITOR = 'mps_selected_monitor_v1';
     let lensCaptureStream = null;
     let lensLoopInterval = null;
     let pdfDoc = null;
@@ -3143,10 +3398,10 @@
       const btn = document.getElementById('ftg-toggle-btn');
       if (isFTGActive) {
         btn.classList.add('active');
-        btn.textContent = "🔮 Background Active";
+        btn.textContent = "🖼️ Background Off";
       } else {
         btn.classList.remove('active');
-        btn.textContent = "🖼️ Fade To Background";
+        btn.textContent = "🖼️ Background On";
       }
       updateLiveMonitorOverlays();
       channel.postMessage({ command: 'TOGGLE_FTG_STATE', active: isFTGActive });
@@ -3155,6 +3410,7 @@
     function closeDisplayScreen() {
       if (displayWindow) { displayWindow.close(); displayWindow = null; }
       channel.postMessage({ command: 'CLOSE_DISPLAY' });
+      updateDisplayToggleButton();
     }
 
     channel.onmessage = async (event) => {
@@ -3289,15 +3545,145 @@
       }
     };
 
+    function getStoredSelectedMonitor() {
+      try { return JSON.parse(localStorage.getItem(LS_SELECTED_MONITOR) || 'null'); }
+      catch (e) { return null; }
+    }
+
+    function monitorIdentity(screen, index) {
+      return {
+        index,
+        label: screen.label || `Display ${index + 1}`,
+        left: Number(screen.availLeft ?? screen.left ?? 0),
+        top: Number(screen.availTop ?? screen.top ?? 0),
+        width: Number(screen.availWidth ?? screen.width ?? 1280),
+        height: Number(screen.availHeight ?? screen.height ?? 720),
+        isPrimary: Boolean(screen.isPrimary),
+        isInternal: Boolean(screen.isInternal),
+        devicePixelRatio: Number(screen.devicePixelRatio || 1)
+      };
+    }
+
+    function renderMonitorChoices() {
+      const list = document.getElementById('monitor-list');
+      const useBtn = document.getElementById('monitor-use-btn');
+      if (!list) return;
+      list.innerHTML = '';
+      availableDisplayScreens.forEach((screen, index) => {
+        const info = monitorIdentity(screen, index);
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'monitor-choice' + (index === pendingMonitorIndex ? ' active' : '');
+        const badges = [info.isPrimary ? 'Primary' : 'Secondary', info.isInternal ? 'Internal' : 'External'].join(' · ');
+        btn.innerHTML = `
+          <span class="monitor-choice-icon">${info.isPrimary ? '💻' : '🖥️'}</span>
+          <span class="monitor-choice-info">
+            <span class="monitor-choice-name">${escapeHtml(info.label)}</span>
+            <span class="monitor-choice-meta">${info.width} × ${info.height} · Position ${info.left}, ${info.top} · Scale ${info.devicePixelRatio}</span>
+          </span>
+          <span class="monitor-choice-badge">${escapeHtml(badges)}</span>`;
+        btn.onclick = () => {
+          pendingMonitorIndex = index;
+          renderMonitorChoices();
+        };
+        list.appendChild(btn);
+      });
+      if (useBtn) useBtn.disabled = pendingMonitorIndex < 0 || !availableDisplayScreens[pendingMonitorIndex];
+    }
+
+    async function detectSecondaryMonitors() {
+      const modal = document.getElementById('monitor-selection-modal');
+      const status = document.getElementById('monitor-modal-status');
+      const list = document.getElementById('monitor-list');
+      if (modal) modal.classList.add('open');
+      if (list) list.innerHTML = '';
+      if (status) status.textContent = 'Requesting permission and scanning connected displays...';
+
+      if (!('getScreenDetails' in window)) {
+        availableDisplayScreens = [];
+        pendingMonitorIndex = -1;
+        if (status) status.innerHTML = 'This browser does not support automatic monitor detection. Use a current Chromium-based browser over HTTPS or localhost, or move the display window manually.';
+        return;
+      }
+
+      try {
+        const details = await window.getScreenDetails();
+        availableDisplayScreens = Array.from(details.screens || []);
+        const stored = getStoredSelectedMonitor();
+        let matchedIndex = -1;
+        if (stored) {
+          matchedIndex = availableDisplayScreens.findIndex((screen, index) => {
+            const info = monitorIdentity(screen, index);
+            return info.left === stored.left && info.top === stored.top && info.width === stored.width && info.height === stored.height;
+          });
+        }
+        if (matchedIndex < 0) matchedIndex = availableDisplayScreens.findIndex(screen => !screen.isPrimary);
+        if (matchedIndex < 0 && availableDisplayScreens.length) matchedIndex = 0;
+        pendingMonitorIndex = matchedIndex;
+        renderMonitorChoices();
+        const secondaryCount = availableDisplayScreens.filter(screen => !screen.isPrimary).length;
+        if (status) status.textContent = `${availableDisplayScreens.length} display${availableDisplayScreens.length === 1 ? '' : 's'} detected. ${secondaryCount ? secondaryCount + ' secondary monitor' + (secondaryCount === 1 ? '' : 's') + ' available.' : 'No separate secondary monitor was reported.'}`;
+      } catch (error) {
+        availableDisplayScreens = [];
+        pendingMonitorIndex = -1;
+        if (status) status.textContent = 'Monitor detection was not allowed or failed: ' + (error && error.message ? error.message : 'permission denied');
+      }
+    }
+
+    function closeMonitorSelectionModal() {
+      const modal = document.getElementById('monitor-selection-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function confirmSelectedMonitor() {
+      const screen = availableDisplayScreens[pendingMonitorIndex];
+      if (!screen) return;
+      selectedMonitor = monitorIdentity(screen, pendingMonitorIndex);
+      localStorage.setItem(LS_SELECTED_MONITOR, JSON.stringify(selectedMonitor));
+      updateSelectedMonitorButton();
+      closeMonitorSelectionModal();
+      showModal('Display Monitor Selected', `${selectedMonitor.label} (${selectedMonitor.width} × ${selectedMonitor.height}) will be used when you open the display screen.`, false);
+    }
+
+    function updateSelectedMonitorButton() {
+      const btn = document.getElementById('monitor-detect-btn');
+      if (!btn) return;
+      selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
+      if (selectedMonitor) {
+        btn.textContent = '🖥️ ' + (selectedMonitor.label || 'Monitor Selected');
+        btn.title = `Selected: ${selectedMonitor.label || 'Display'} — ${selectedMonitor.width} × ${selectedMonitor.height}`;
+        btn.classList.add('selected');
+      } else {
+        btn.textContent = '🖥️ Detect Monitor';
+        btn.title = 'Detect and choose a secondary monitor';
+        btn.classList.remove('selected');
+      }
+    }
+
     async function openDisplayWindow() {
       const base = window.location.href.split('?')[0];
-      const features = 'popup=yes,width=1280,height=720,left=1920,top=0';
+      selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
+      const target = selectedMonitor;
+      const width = target ? Math.max(640, target.width) : 1280;
+      const height = target ? Math.max(480, target.height) : 720;
+      const left = target ? target.left : (window.screenX + window.outerWidth);
+      const top = target ? target.top : 0;
+      const features = `popup=yes,width=${width},height=${height},left=${left},top=${top}`;
       displayWindow = window.open(base + '?display=true', 'ProjectorOutputWindow', features);
       if (!displayWindow) {
         showModal('Display Window Blocked', 'Please allow popups, then click Open Display Screen again.', false);
         return;
       }
-      showModal('Move Display Window', 'Browsers cannot reliably detect or choose the extended display automatically. If it opened on the wrong screen, drag it to the projector monitor and click fullscreen there.', false);
+      try {
+        displayWindow.moveTo(left, top);
+        displayWindow.resizeTo(width, height);
+        displayWindow.focus();
+      } catch (e) {}
+      if (!target) {
+        showModal('No Monitor Selected', 'The display window was opened using the browser default position. Use Detect Monitor to choose a secondary display automatically.', false);
+      }
+      updateDisplayToggleButton();
+      if (displayWindow) displayWindow.addEventListener('beforeunload', () => { displayWindow = null; updateDisplayToggleButton(); });
     }
 
     window.addEventListener('keydown', (e) => {
@@ -4574,7 +4960,86 @@
 
     window.addEventListener('resize', fitAllBibleCardsSoon);
 
+
+    function updateHeaderClock() {
+      const el = document.getElementById('header-clock');
+      if (!el) return;
+      el.textContent = new Intl.DateTimeFormat('en-US', {
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+      }).format(new Date());
+    }
+
+    function hideIntroLoadingScreen() {
+      const intro = document.getElementById('intro-loading-screen');
+      if (!intro) return;
+      setTimeout(() => intro.classList.add('hide'), 1100);
+      setTimeout(() => { if (intro && intro.parentNode) intro.remove(); }, 2000);
+    }
+
+    function updateDisplayToggleButton() {
+      const btn = document.getElementById('display-toggle-btn');
+      if (!btn) return;
+      const isOpen = Boolean(displayWindow && !displayWindow.closed);
+      btn.textContent = isOpen ? 'Close Display Screen' : 'Open Display Screen';
+      btn.classList.toggle('active', isOpen);
+    }
+
+    function toggleDisplayScreen() {
+      if (displayWindow && !displayWindow.closed) closeDisplayScreen();
+      else openDisplayWindow();
+      updateDisplayToggleButton();
+    }
+
+    function openAddBibleModal() {
+      const modal = document.getElementById('add-bible-modal');
+      if (!modal) return;
+      updateBiblePendingFileStatus();
+      modal.classList.add('open');
+    }
+
+    function closeAddBibleModal() {
+      const modal = document.getElementById('add-bible-modal');
+      if (modal) modal.classList.remove('open');
+    }
+
+    function chooseBibleFiles() {
+      const input = document.getElementById('bible-file-uploader');
+      if (input) input.click();
+    }
+
+    function handleBiblePickerSelection() {
+      updateBiblePendingFileStatus();
+      const status = document.getElementById('add-bible-modal-status');
+      const files = getPendingBibleImportFiles();
+      const supported = files.filter(file => isSupportedBibleFile(file.name));
+      if (status) {
+        status.style.display = 'block';
+        status.textContent = supported.length
+          ? `${supported.length} supported Bible file${supported.length === 1 ? '' : 's'} selected and ready to import.`
+          : 'No supported Bible files were found in this selection.';
+      }
+    }
+
+    async function importBibleFilesFromModal() {
+      const btn = document.getElementById('add-bible-import-btn');
+      if (btn) { btn.disabled = true; btn.textContent = 'Importing...'; }
+      try {
+        await importBibleFiles();
+        const remaining = getPendingBibleImportFiles();
+        if (!remaining.length) closeAddBibleModal();
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'Import Bible'; }
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', async () => {
+      updateHeaderClock();
+      setInterval(updateHeaderClock, 1000);
+      updateDisplayToggleButton();
+      hideIntroLoadingScreen();
+
       // Check for user theme preferences on load
       const savedTheme = localStorage.getItem('mps_theme_mode');
       const toggleCheckbox = document.getElementById('checkbox');
@@ -4599,6 +5064,7 @@
         renderPreview();
         renderLiveView();
         setSlideStatus();
+        updateSelectedMonitorButton();
       }
     });
   
