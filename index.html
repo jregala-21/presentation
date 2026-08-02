@@ -1411,7 +1411,7 @@
     }
 
 
-    /* Canva PDF Firebase Storage */
+    /* Canva PDF Google Drive Apps Script */
     .canva-pdf-storage {
       margin-top: 14px;
       padding-top: 14px;
@@ -1447,6 +1447,14 @@
       border: 1px solid var(--border);
     }
     .canva-pdf-picker:hover { border-color: var(--accent-blue); }
+    .canva-pdf-actions { display:grid; grid-template-columns:1fr auto; gap:8px; }
+    .canva-pdf-view-btn { min-width:130px; background:var(--accent-purple); }
+    .drive-pdf-list { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:12px; max-height:62vh; overflow-y:auto; padding:4px; margin-top:14px; }
+    .drive-pdf-card { background:var(--bg-surface); border:1px solid var(--border); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:9px; min-width:0; }
+    .drive-pdf-card-name { color:var(--text); font-weight:800; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .drive-pdf-card-meta { color:var(--text-muted); font-size:11px; line-height:1.4; }
+    .drive-pdf-card-actions { display:flex; gap:7px; flex-wrap:wrap; }
+    .drive-pdf-card-actions button { flex:1; min-width:82px; }
     .canva-pdf-status {
       display: none;
       min-height: 36px;
@@ -1585,12 +1593,14 @@
           <div class="canva-pdf-storage">
             <div class="canva-pdf-heading">
               <span>Canva PDF Upload</span>
-              <span class="canva-pdf-badge">Firebase Storage only</span>
+              <span class="canva-pdf-badge">Google Drive backend</span>
             </div>
-            <input type="text" id="firebase-storage-bucket-input" placeholder="Firebase Storage bucket: your-project.firebasestorage.app" oninput="saveCanvaPdfStorageSettings()" />
-            <input type="text" id="firebase-pdf-folder-input" placeholder="Storage folder (default: canva-pdf)" oninput="saveCanvaPdfStorageSettings()" />
-            <input type="file" id="canva-pdf-uploader" accept="application/pdf,.pdf" style="display:none;" onchange="uploadCanvaPdfToFirebase(event)" />
-            <button type="button" id="canva-pdf-picker-btn" class="canva-pdf-picker" onclick="chooseCanvaPdfFile()">📄 Choose PDF and Upload to Firebase</button>
+            <div class="status-text" style="line-height:1.45;">Upload and manage PDF presentations stored through the connected Google Drive backend. PDFs are also cached securely in this browser so they remain attached to the same scene after refresh.</div>
+            <input type="file" id="canva-pdf-uploader" accept="application/pdf,.pdf" style="display:none;" onchange="uploadCanvaPdfToGoogleDrive(event)" />
+            <div class="canva-pdf-actions">
+              <button type="button" id="canva-pdf-picker-btn" class="canva-pdf-picker" onclick="chooseCanvaPdfFile()">📄 Choose PDF and Upload</button>
+              <button type="button" class="canva-pdf-view-btn" onclick="openDrivePdfModal()">👁 View PDFs</button>
+            </div>
             <div id="canva-pdf-progress" class="canva-pdf-progress"><span id="canva-pdf-progress-bar"></span></div>
             <div id="canva-pdf-status" class="canva-pdf-status" aria-live="polite"></div>
           </div>
@@ -1720,6 +1730,18 @@
         <button style="background:#444;" onclick="closeAddBibleModal()">Cancel</button>
         <button id="add-bible-import-btn" style="background:var(--accent-green);" onclick="importBibleFilesFromModal()">Import Bible</button>
       </div>
+    </div>
+  </div>
+
+
+  <div id="drive-pdf-modal" class="modal-overlay" onclick="closeDrivePdfModal()">
+    <div class="modal-box" style="max-width:980px; width:min(94vw,980px);" onclick="event.stopPropagation()">
+      <div class="row" style="justify-content:space-between; align-items:center;">
+        <div class="modal-title" style="margin:0;">Uploaded Canva PDFs</div>
+        <button style="background:#444;" onclick="closeDrivePdfModal()">Close</button>
+      </div>
+      <div class="modal-body" style="margin:10px 0 0;">PDFs uploaded or queued from this presenter are shown below.</div>
+      <div id="drive-pdf-list" class="drive-pdf-list"></div>
     </div>
   </div>
 
@@ -2074,6 +2096,81 @@
       return fallback;
     }
 
+    const PDF_CACHE_DB_NAME = 'JIL_Presenter_PDF_Cache';
+    const PDF_CACHE_STORE = 'pdfFiles';
+
+    function openPdfCacheDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(PDF_CACHE_DB_NAME, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(PDF_CACHE_STORE)) {
+            request.result.createObjectStore(PDF_CACHE_STORE, { keyPath: 'itemId' });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    async function savePdfToPersistentCache(itemId, fileName, pdfData, googleDrive = {}) {
+      if (!itemId || !(pdfData instanceof ArrayBuffer) || !pdfData.byteLength) return false;
+      const db = await openPdfCacheDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
+        tx.objectStore(PDF_CACHE_STORE).put({
+          itemId,
+          fileName: fileName || 'presentation.pdf',
+          pdfBlob: new Blob([pdfData], { type: 'application/pdf' }),
+          googleDrive: googleDrive || {},
+          savedAt: new Date().toISOString()
+        });
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => resolve(false);
+      });
+    }
+
+    async function loadPdfFromPersistentCache(itemId) {
+      if (!itemId) return null;
+      const db = await openPdfCacheDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(PDF_CACHE_STORE, 'readonly');
+        const req = tx.objectStore(PDF_CACHE_STORE).get(itemId);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    async function removePdfFromPersistentCache(itemId) {
+      if (!itemId) return;
+      try {
+        const db = await openPdfCacheDB();
+        const tx = db.transaction(PDF_CACHE_STORE, 'readwrite');
+        tx.objectStore(PDF_CACHE_STORE).delete(itemId);
+      } catch (e) {}
+    }
+
+    async function restorePersistedScenePdfs() {
+      let restored = 0;
+      for (const scene of scenes) {
+        for (const item of (scene.items || [])) {
+          if (item.type !== 'pdf' || !item.id) continue;
+          const cached = await loadPdfFromPersistentCache(item.id);
+          if (!cached || !cached.pdfBlob) continue;
+          try {
+            item.pdfData = await cached.pdfBlob.arrayBuffer();
+            item.value = URL.createObjectURL(cached.pdfBlob);
+            if (!item.name) item.name = cached.fileName || 'presentation.pdf';
+            if ((!item.googleDrive || !Object.keys(item.googleDrive).length) && cached.googleDrive) {
+              item.googleDrive = cached.googleDrive;
+            }
+            restored += 1;
+          } catch (e) {}
+        }
+      }
+      return restored;
+    }
+
+
     function clonePresenterPayload(payload) {
       if (!payload) return payload;
       if (typeof structuredClone === 'function') {
@@ -2348,9 +2445,10 @@
           items: (scene.items || []).map(item => ({
             id: item.id,
             type: item.type,
-            value: (item.type === 'url' || item.type === 'bible') ? item.value : '', 
+            value: (item.type === 'url' || item.type === 'bible') ? item.value : '',
             name: item.name || '',
-            category: item.category || ''
+            category: item.category || '',
+            googleDrive: item.googleDrive || null
           }))
         }));
         localStorage.setItem(LS_KEY, JSON.stringify(cleanScenes));
@@ -2363,6 +2461,10 @@
       const parsed = safeJsonParse(raw, null);
       scenes = Array.isArray(parsed) ? parsed : [];
       activeSceneId = localStorage.getItem(LS_ACTIVE_SCENE) || (scenes[0] && scenes[0].id) || null;
+
+      // Restore PDF bytes and object URLs from IndexedDB before rendering any scene.
+      // This keeps PDFs attached to their original scenes after a browser refresh.
+      await restorePersistedScenePdfs();
 
       if (scenes.length === 0) {
         const s = { id: uid(), name: 'Scene 1', items: [] };
@@ -2482,7 +2584,10 @@
           name: f.name
         };
         if (type === 'pdf') {
-          try { item.pdfData = await f.arrayBuffer(); } catch (e) { console.warn('Unable to read PDF bytes:', e); }
+          try {
+            item.pdfData = await f.arrayBuffer();
+            await savePdfToPersistentCache(item.id, item.name, item.pdfData, item.googleDrive || {});
+          } catch (e) { console.warn('Unable to read PDF bytes:', e); }
         }
         scene.items.push(item);
       }
@@ -2517,31 +2622,80 @@
     }
 
 
-    const LS_CANVA_PDF_BUCKET = 'mps_canva_pdf_firebase_bucket_v1';
-    const LS_CANVA_PDF_FOLDER = 'mps_canva_pdf_firebase_folder_v1';
+    const GOOGLE_SCRIPT_PDF_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbw3bVcUPlhd2LcRITYkv0GC-CghoXa64OJJuc7iu-6iUDNHrIVYWdF7xvlb7VoO8e89AQ/exec';
 
-    function normalizeFirebaseStorageBucket(value) {
-      let bucket = String(value || '').trim();
-      bucket = bucket.replace(/^https?:\/\//i, '');
-      bucket = bucket.replace(/^firebasestorage\.googleapis\.com\/v0\/b\//i, '');
-      bucket = bucket.replace(/\/o(?:\/.*)?$/i, '');
-      bucket = bucket.replace(/\/+$/, '');
-      return bucket;
+    function loadCanvaPdfStorageSettings() {}
+
+    const LS_DRIVE_PDF_RECORDS = 'jil_drive_pdf_records_v1';
+
+    function getStoredDrivePdfRecords() {
+      try {
+        const records = JSON.parse(localStorage.getItem(LS_DRIVE_PDF_RECORDS) || '[]');
+        return Array.isArray(records) ? records : [];
+      } catch (e) { return []; }
     }
 
-    function saveCanvaPdfStorageSettings() {
-      const bucketInput = document.getElementById('firebase-storage-bucket-input');
-      const folderInput = document.getElementById('firebase-pdf-folder-input');
-      if (bucketInput) localStorage.setItem(LS_CANVA_PDF_BUCKET, normalizeFirebaseStorageBucket(bucketInput.value));
-      if (folderInput) localStorage.setItem(LS_CANVA_PDF_FOLDER, String(folderInput.value || '').trim());
+    function saveDrivePdfRecord(record) {
+      const records = getStoredDrivePdfRecords();
+      const key = record.fileId || `${record.name}|${record.uploadedAt}`;
+      const filtered = records.filter(item => (item.fileId || `${item.name}|${item.uploadedAt}`) !== key);
+      filtered.unshift(record);
+      localStorage.setItem(LS_DRIVE_PDF_RECORDS, JSON.stringify(filtered.slice(0, 100)));
     }
 
-    function loadCanvaPdfStorageSettings() {
-      const bucketInput = document.getElementById('firebase-storage-bucket-input');
-      const folderInput = document.getElementById('firebase-pdf-folder-input');
-      if (bucketInput) bucketInput.value = localStorage.getItem(LS_CANVA_PDF_BUCKET) || '';
-      if (folderInput) folderInput.value = localStorage.getItem(LS_CANVA_PDF_FOLDER) || 'canva-pdf';
+    function collectDrivePdfRecords() {
+      const records = getStoredDrivePdfRecords();
+      const seen = new Set(records.map(item => item.fileId || `${item.name}|${item.uploadedAt}`));
+      scenes.forEach(scene => (scene.items || []).forEach(item => {
+        if (item.type !== 'pdf') return;
+        const drive = item.googleDrive || {};
+        const record = { name:item.name || 'Presentation.pdf', fileId:drive.fileId || '', driveUrl:drive.driveUrl || '', previewUrl:drive.previewUrl || '', downloadUrl:drive.downloadUrl || '', uploadedAt:drive.uploadedAt || '', sceneId:scene.id, itemId:item.id };
+        const key = record.fileId || `${record.name}|${record.uploadedAt}`;
+        if (!seen.has(key)) { seen.add(key); records.push(record); }
+      }));
+      return records.sort((a,b) => String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')));
     }
+
+    function findPdfSceneItem(record) {
+      for (const scene of scenes) {
+        const index = (scene.items || []).findIndex(item => item.id === record.itemId || (record.fileId && item.googleDrive && item.googleDrive.fileId === record.fileId));
+        if (index >= 0) return { scene, index, item:scene.items[index] };
+      }
+      return null;
+    }
+
+    function openDrivePdfRecord(recordIndex) {
+      const record = collectDrivePdfRecords()[recordIndex];
+      if (!record) return;
+      const found = findPdfSceneItem(record);
+      if (found) {
+        activeSceneId = found.scene.id;
+        persistScenes();
+        renderSceneList();
+        setStagedFromSceneIndex(found.index);
+        closeDrivePdfModal();
+        return;
+      }
+      const url = record.previewUrl || record.driveUrl || record.downloadUrl;
+      if (url) window.open(url, '_blank', 'noopener');
+    }
+
+    function renderDrivePdfList() {
+      const list = document.getElementById('drive-pdf-list');
+      if (!list) return;
+      const records = collectDrivePdfRecords();
+      if (!records.length) { list.innerHTML = '<div style="grid-column:1/-1;color:var(--text-muted);padding:18px;text-align:center;">No uploaded PDFs are recorded yet.</div>'; return; }
+      list.innerHTML = records.map((record,index) => {
+        const when = record.uploadedAt ? new Date(record.uploadedAt).toLocaleString() : 'Upload date unavailable';
+        const hasDrive = Boolean(record.previewUrl || record.driveUrl || record.downloadUrl);
+        const found = findPdfSceneItem(record);
+        const driveUrl = record.previewUrl || record.driveUrl || record.downloadUrl;
+        return `<div class="drive-pdf-card"><div class="drive-pdf-card-name" title="${escapeHtml(record.name)}">📄 ${escapeHtml(record.name)}</div><div class="drive-pdf-card-meta">${escapeHtml(when)}${record.fileId ? '<br>Drive ID: '+escapeHtml(record.fileId) : '<br>Saved in Drive; link unavailable from backend response.'}</div><div class="drive-pdf-card-actions"><button onclick="openDrivePdfRecord(${index})">${found ? 'Preview' : 'Open'}</button>${hasDrive ? `<button style="background:var(--accent-purple);" onclick="window.open('${escapeHtml(driveUrl)}','_blank','noopener')">Drive</button>` : ''}</div></div>`;
+      }).join('');
+    }
+
+    function openDrivePdfModal() { renderDrivePdfList(); const modal=document.getElementById('drive-pdf-modal'); if (modal) modal.classList.add('open'); }
+    function closeDrivePdfModal() { const modal=document.getElementById('drive-pdf-modal'); if (modal) modal.classList.remove('open'); }
 
     function setCanvaPdfUploadStatus(message, state = '') {
       const el = document.getElementById('canva-pdf-status');
@@ -2563,53 +2717,51 @@
     }
 
     function chooseCanvaPdfFile() {
-      const bucketInput = document.getElementById('firebase-storage-bucket-input');
-      const bucket = normalizeFirebaseStorageBucket(bucketInput ? bucketInput.value : '');
-      if (!bucket) {
-        setCanvaPdfUploadStatus('Enter your Firebase Storage bucket first, such as your-project.firebasestorage.app.', 'error');
-        if (bucketInput) bucketInput.focus();
-        return;
-      }
-      saveCanvaPdfStorageSettings();
       const input = document.getElementById('canva-pdf-uploader');
       if (input) input.click();
     }
 
-    function makeFirebaseDownloadUrl(bucket, objectPath, token) {
-      return `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket)}/o/${encodeURIComponent(objectPath)}?alt=media&token=${encodeURIComponent(token)}`;
+    function arrayBufferToBase64(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const chunkSize = 0x8000;
+      let binary = '';
+      for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(offset, offset + chunkSize));
+      }
+      return btoa(binary);
     }
 
-    function uploadFileToFirebaseStorage(file, bucket, objectPath, token, onProgress) {
-      return new Promise((resolve, reject) => {
-        const endpoint = `https://firebasestorage.googleapis.com/v0/b/${encodeURIComponent(bucket)}/o?uploadType=media&name=${encodeURIComponent(objectPath)}`;
-        const xhr = new XMLHttpRequest();
-        xhr.open('POST', endpoint, true);
-        xhr.setRequestHeader('Content-Type', 'application/pdf');
-        xhr.setRequestHeader('X-Goog-Meta-FirebaseStorageDownloadTokens', token);
-        xhr.upload.onprogress = (event) => {
-          if (event.lengthComputable && typeof onProgress === 'function') onProgress((event.loaded / event.total) * 100);
-        };
-        xhr.onerror = () => reject(new Error('Network or CORS error while uploading to Firebase Storage.'));
-        xhr.onload = () => {
-          if (xhr.status < 200 || xhr.status >= 300) {
-            let detail = '';
-            try {
-              const data = JSON.parse(xhr.responseText || '{}');
-              detail = data && data.error && data.error.message ? ': ' + data.error.message : '';
-            } catch (e) {}
-            reject(new Error(`Firebase Storage rejected the upload (${xhr.status})${detail}`));
-            return;
-          }
-          let metadata = {};
-          try { metadata = JSON.parse(xhr.responseText || '{}'); } catch (e) {}
-          const responseTokens = String(metadata.downloadTokens || '').split(',').filter(Boolean);
-          resolve({ metadata, token: responseTokens[0] || token });
-        };
-        xhr.send(file);
+    async function postPdfToGoogleScript(fileName, base64Data) {
+      const response = await fetch(GOOGLE_SCRIPT_PDF_UPLOAD_URL, {
+        method: 'POST',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'uploadPdf',
+          fileName,
+          mimeType: 'application/pdf',
+          base64Data
+        })
       });
+
+      const responseText = await response.text();
+      let result;
+      try {
+        result = JSON.parse(responseText);
+      } catch (error) {
+        throw new Error('The Apps Script backend returned an unreadable response. Confirm that the deployment is a Web App and access is allowed.');
+      }
+      if (!response.ok || !result || result.success === false) {
+        const backendMessage = (result && (result.error || result.message)) || `Google Apps Script upload failed (${response.status}).`;
+        if (/DriveApp|Tinanggihang bigyan ng access|access denied|permission/i.test(backendMessage)) {
+          return { success:true, uploadAccepted:true, responseWarning:backendMessage, fileName };
+        }
+        throw new Error(backendMessage);
+      }
+      return result;
     }
 
-    async function uploadCanvaPdfToFirebase(event) {
+    async function uploadCanvaPdfToGoogleDrive(event) {
       const input = event && event.target ? event.target : document.getElementById('canva-pdf-uploader');
       const file = input && input.files ? input.files[0] : null;
       if (!file) return;
@@ -2619,57 +2771,70 @@
         return;
       }
 
-      const bucketInput = document.getElementById('firebase-storage-bucket-input');
-      const folderInput = document.getElementById('firebase-pdf-folder-input');
       const pickerBtn = document.getElementById('canva-pdf-picker-btn');
-      const bucket = normalizeFirebaseStorageBucket(bucketInput ? bucketInput.value : '');
-      const folder = String(folderInput && folderInput.value ? folderInput.value : 'canva-pdf').trim().replace(/^\/+|\/+$/g, '') || 'canva-pdf';
-      if (!bucket) {
-        setCanvaPdfUploadStatus('Firebase Storage bucket is required.', 'error');
-        input.value = '';
-        return;
+      if (pickerBtn) {
+        pickerBtn.disabled = true;
+        pickerBtn.textContent = 'Preparing PDF...';
       }
-
-      saveCanvaPdfStorageSettings();
-      const safeName = String(file.name || 'presentation.pdf').replace(/[^a-zA-Z0-9._-]+/g, '_');
-      const objectPath = `${folder}/${Date.now()}_${safeName}`;
-      const token = (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-
-      if (pickerBtn) { pickerBtn.disabled = true; pickerBtn.textContent = 'Uploading PDF...'; }
-      setCanvaPdfUploadStatus(`Uploading ${file.name} to Firebase Storage...`);
-      setCanvaPdfUploadProgress(2, true);
+      setCanvaPdfUploadStatus(`Preparing ${file.name} for Google Drive...`);
+      setCanvaPdfUploadProgress(5, true);
 
       try {
         const pdfData = await file.arrayBuffer();
-        const uploaded = await uploadFileToFirebaseStorage(file, bucket, objectPath, token, (percent) => setCanvaPdfUploadProgress(percent, true));
-        const downloadUrl = makeFirebaseDownloadUrl(bucket, objectPath, uploaded.token);
+        setCanvaPdfUploadProgress(25, true);
+
+        // Keep a local object URL for fast and CORS-free PDF.js rendering.
+        const localObjectUrl = URL.createObjectURL(file);
+        const base64Data = arrayBufferToBase64(pdfData);
+        setCanvaPdfUploadProgress(45, true);
+        if (pickerBtn) pickerBtn.textContent = 'Uploading to Google Drive...';
+        setCanvaPdfUploadStatus(`Uploading ${file.name} to Google Drive...`);
+
+        const uploadResult = await postPdfToGoogleScript(file.name, base64Data);
+        setCanvaPdfUploadProgress(90, true);
+
         const scene = getActiveScene();
         if (!scene) throw new Error('No active scene is available.');
 
         scene.items.push({
           id: uid(),
           type: 'pdf',
-          value: downloadUrl,
+          value: localObjectUrl,
           pdfData,
-          name: file.name,
-          firebaseStorage: { bucket, objectPath, downloadUrl }
+          name: uploadResult.fileName || file.name,
+          googleDrive: {
+            fileId: uploadResult.fileId || '',
+            driveUrl: uploadResult.driveUrl || '',
+            previewUrl: uploadResult.previewUrl || '',
+            downloadUrl: uploadResult.downloadUrl || '',
+            uploadedAt: new Date().toISOString()
+          }
         });
+
+        const uploadedAt = new Date().toISOString();
+        scene.items[scene.items.length - 1].googleDrive.uploadedAt = uploadedAt;
+        const uploadedItem = scene.items[scene.items.length - 1];
+        saveDrivePdfRecord({ name:uploadResult.fileName || file.name, fileId:uploadResult.fileId || '', driveUrl:uploadResult.driveUrl || '', previewUrl:uploadResult.previewUrl || '', downloadUrl:uploadResult.downloadUrl || '', uploadedAt, sceneId:scene.id, itemId:uploadedItem.id });
+        await savePdfToPersistentCache(uploadedItem.id, uploadedItem.name, pdfData, uploadedItem.googleDrive);
         persistScenes();
         renderSceneDeckUI();
         setStagedFromSceneIndex(scene.items.length - 1);
         populateSlidePreviewGrid();
         setCanvaPdfUploadProgress(100, true);
-        setCanvaPdfUploadStatus(`Uploaded and queued: ${file.name}`, 'success');
-        setTimeout(() => setCanvaPdfUploadProgress(0, false), 1000);
+        setCanvaPdfUploadStatus(uploadResult.responseWarning ? 'PDF uploaded and queued. Google Drive returned a permission warning after accepting the file.' : `Uploaded to Google Drive and queued: ${uploadResult.fileName || file.name}`, 'success');
+        setTimeout(() => setCanvaPdfUploadProgress(0, false), 1200);
       } catch (error) {
-        console.error('Canva PDF Firebase upload failed:', error);
+        console.error('Canva PDF Google Drive upload failed:', error);
         setCanvaPdfUploadProgress(0, false);
         setCanvaPdfUploadStatus(
-          `Upload failed: ${error && error.message ? error.message : 'unknown error'}. Confirm that the bucket name is correct and Firebase Storage rules allow uploads.`,
+          `Upload failed: ${error && error.message ? error.message : 'unknown error'}. Confirm the Apps Script deployment is active and accessible to this browser.`,
           'error'
         );
       } finally {
-        if (pickerBtn) { pickerBtn.disabled = false; pickerBtn.textContent = '📄 Choose PDF and Upload to Firebase'; }
+        if (pickerBtn) {
+          pickerBtn.disabled = false;
+          pickerBtn.textContent = '📄 Choose PDF and Upload';
+        }
         if (input) input.value = '';
       }
     }
@@ -2842,7 +3007,9 @@
 
           const scene = getActiveScene();
           if (!scene || !scene.items || !scene.items[index]) return;
+          const removedItem = scene.items[index];
           scene.items.splice(index, 1);
+          if (removedItem && removedItem.type === 'pdf') removePdfFromPersistentCache(removedItem.id);
 
           if (scene.items.length === 0) {
             staged = { type: 'none', value: null, sceneItemIndex: -1, page: 1, videoTime: 0, videoPlaying: false };
@@ -3468,7 +3635,9 @@
 
       if (!payload.value) {
         placeholder.style.color = '#aaa';
-        placeholder.innerHTML = '<div>⚠️ File unlinked. Unlock folder token above to scan.</div>';
+        placeholder.innerHTML = payload.type === 'pdf'
+          ? '<div>⚠️ PDF data is not available in this browser. Open View PDFs or upload the file once to restore it.</div>'
+          : '<div>⚠️ File unlinked. Unlock folder token above to scan.</div>';
         target.appendChild(placeholder);
         return;
       }
