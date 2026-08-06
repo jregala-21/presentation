@@ -47,3 +47,10 @@ python3 -m http.server 5500
 ```
 
 Open `http://127.0.0.1:5500/index.html`.
+
+
+## Selected-monitor presentation
+
+The ONLYOFFICE editor header now includes **Present on Selected Monitor**. First use the main presenter's **Detect Monitor** control and select the audience display. Open a PPTX in ONLYOFFICE, then click the new button. The editor remains on the operator display and a view-only presentation player opens directly on the stored secondary-monitor coordinates.
+
+This is a website-controlled audience player. The built-in ONLYOFFICE **Show presenter view** popup is created inside the cross-origin ONLYOFFICE iframe and cannot be redirected by the parent website. Use the new website button for automatic monitor placement.

@@ -76,6 +76,98 @@
     });
   }
 
+  let selectedMonitorPresentationWindow = null;
+
+  function readSelectedMonitor() {
+    try {
+      return JSON.parse(localStorage.getItem('mps_selected_monitor_v1') || 'null');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function writeAudienceShell(popup, title) {
+    popup.document.open();
+    popup.document.write(`<!doctype html>
+<html><head><meta charset="utf-8"><title>${String(title || 'Presentation').replace(/[<>&"]/g, '')}</title>
+<style>html,body,#onlyoffice-audience-host{width:100%;height:100%;margin:0;overflow:hidden;background:#000}body{font-family:Arial,sans-serif}.loading{position:fixed;inset:0;display:grid;place-items:center;color:#fff;background:#000;font-size:20px;z-index:10}</style>
+</head><body><div id="onlyoffice-audience-loading" class="loading">Loading presentation…</div><div id="onlyoffice-audience-host"></div></body></html>`);
+    popup.document.close();
+  }
+
+  async function loadOnlyOfficeApiInWindow(targetWindow, apiUrl) {
+    if (targetWindow.DocsAPI) return;
+    await new Promise((resolve, reject) => {
+      const script = targetWindow.document.createElement('script');
+      script.src = apiUrl;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Unable to load ONLYOFFICE presentation player.'));
+      targetWindow.document.head.appendChild(script);
+    });
+    if (!targetWindow.DocsAPI) throw new Error('ONLYOFFICE presentation player is unavailable.');
+  }
+
+  window.presentOnlyOfficeOnSelectedMonitor = async function() {
+    if (!state.sessionId || !state.sessionToken) {
+      setStatus('Open a PowerPoint file in ONLYOFFICE first.', 'error');
+      return;
+    }
+
+    const monitor = readSelectedMonitor();
+    if (!monitor) {
+      setStatus('Select a display first using Detect Monitor in the main presenter window.', 'error');
+      return;
+    }
+
+    const width = Math.max(640, Number(monitor.width) || 1280);
+    const height = Math.max(480, Number(monitor.height) || 720);
+    const left = Number.isFinite(Number(monitor.left)) ? Number(monitor.left) : window.screenX + window.outerWidth;
+    const top = Number.isFinite(Number(monitor.top)) ? Number(monitor.top) : 0;
+    const features = `popup=yes,width=${width},height=${height},left=${left},top=${top}`;
+
+    selectedMonitorPresentationWindow = window.open('', 'OnlyOfficeSelectedMonitorPresentation', features);
+    if (!selectedMonitorPresentationWindow) {
+      setStatus('The presentation window was blocked. Allow pop-ups for this site and try again.', 'error');
+      return;
+    }
+
+    writeAudienceShell(selectedMonitorPresentationWindow, state.sourceFileName || 'Presentation');
+    try {
+      selectedMonitorPresentationWindow.moveTo(left, top);
+      selectedMonitorPresentationWindow.resizeTo(width, height);
+      selectedMonitorPresentationWindow.focus();
+    } catch (_) {}
+
+    try {
+      setStatus(`Opening the audience presentation on ${monitor.label || 'the selected monitor'}…`);
+      const result = await postBridge(`/api/sessions/${encodeURIComponent(state.sessionId)}/view-config`, {
+        sessionToken: state.sessionToken,
+        mode: 'live'
+      });
+      await loadOnlyOfficeApiInWindow(selectedMonitorPresentationWindow, result.apiUrl);
+      const loading = selectedMonitorPresentationWindow.document.getElementById('onlyoffice-audience-loading');
+      const config = Object.assign({}, result.config, { width: '100%', height: '100%' });
+      config.events = Object.assign({}, config.events || {}, {
+        onDocumentReady() {
+          if (loading) loading.remove();
+        },
+        onError(event) {
+          const detail = event?.data?.errorDescription || event?.data?.errorCode || 'Presentation player error';
+          if (loading) loading.textContent = String(detail);
+        }
+      });
+      selectedMonitorPresentationWindow.__onlyOfficeAudienceEditor = new selectedMonitorPresentationWindow.DocsAPI.DocEditor('onlyoffice-audience-host', config);
+      setStatus(`Audience presentation opened on ${monitor.label || 'the selected monitor'}. Keep the ONLYOFFICE editor on this screen.`, 'success');
+    } catch (error) {
+      try {
+        const loading = selectedMonitorPresentationWindow.document.getElementById('onlyoffice-audience-loading');
+        if (loading) loading.textContent = error.message || String(error);
+      } catch (_) {}
+      setStatus('Unable to open the selected-monitor presentation: ' + (error.message || error), 'error');
+    }
+  };
+
 
   async function createLocalEditorSession(file) {
     setProgress(12, 'Sending PowerPoint to local bridge');
