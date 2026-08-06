@@ -1,0 +1,32 @@
+services:
+  documentserver:
+    image: onlyoffice/documentserver:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_IN_BODY: "true"
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/healthcheck"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  bridge:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      PORT: "3000"
+      JWT_SECRET: "${JWT_SECRET}"
+      PUBLIC_BRIDGE_URL: "http://bridge:3000"
+      ONLYOFFICE_PUBLIC_URL: "http://127.0.0.1:8080"
+      ONLYOFFICE_INTERNAL_URL: "http://documentserver"
+      ALLOWED_ORIGINS: "http://127.0.0.1:5500"
+    depends_on:
+      documentserver:
+        condition: service_healthy

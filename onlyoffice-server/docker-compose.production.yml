@@ -1,0 +1,38 @@
+services:
+  documentserver:
+    image: onlyoffice/documentserver:9.4.0
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:80"
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: "${JWT_SECRET}"
+      JWT_IN_BODY: "true"
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_logs:/var/log/onlyoffice
+
+  bridge:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      PORT: "3000"
+      JWT_SECRET: "${JWT_SECRET}"
+      PUBLIC_BRIDGE_URL: "https://bridge.jilwanman.xyz"
+      ONLYOFFICE_PUBLIC_URL: "https://office.jilwanman.xyz"
+      ONLYOFFICE_INTERNAL_URL: "http://documentserver"
+      ALLOWED_ORIGINS: "https://presentation.jilwanman.xyz"
+      SESSION_TTL_HOURS: "24"
+      MAX_FILE_SIZE_MB: "200"
+    volumes:
+      - bridge_sessions:/data/sessions
+    depends_on:
+      - documentserver
+
+volumes:
+  onlyoffice_data:
+  onlyoffice_logs:
+  bridge_sessions:

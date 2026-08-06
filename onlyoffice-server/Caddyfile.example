@@ -1,0 +1,7 @@
+office.jilwanman.xyz {
+  reverse_proxy 127.0.0.1:8080
+}
+
+bridge.jilwanman.xyz {
+  reverse_proxy 127.0.0.1:3000
+}
