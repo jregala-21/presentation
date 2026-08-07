@@ -1,0 +1,21 @@
+{
+  "name": "JIL Presenter Sync Controller",
+  "guid": "asc.{5A760E64-86C8-4A7C-9A5A-2A62A92E2C5E}",
+  "version": "1.0.0",
+  "baseUrl": "",
+  "variations": [
+    {
+      "description": "Synchronizes the presenter control view with the audience slideshow.",
+      "url": "index.html",
+      "EditorsSupport": ["slide"],
+      "isViewer": true,
+      "isVisual": false,
+      "isModal": false,
+      "isInsideMode": false,
+      "initDataType": "none",
+      "initData": "",
+      "buttons": [],
+      "events": ["onDocumentContentReady", "onChangeCurrentSlide", "onSlideShowSlideChanged", "onSlideShowBegin", "onSlideShowEnd"]
+    }
+  ]
+}
