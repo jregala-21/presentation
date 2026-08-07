@@ -933,15 +933,15 @@
   });
 
 
-  function setSendMonitorButtonVisible(visible) {
+  function setSendMonitorButtonVisible(visible = true) {
     const button = document.getElementById('onlyoffice-send-monitor-btn');
     if (!button) return;
     const monitor = readMonitor();
     button.style.display = visible ? '' : 'none';
     button.disabled = !monitor;
     button.title = monitor
-      ? 'Move the current ONLYOFFICE audience view to the selected display and enter fullscreen.'
-      : 'Select a secondary monitor first.';
+      ? 'Send the current ONLYOFFICE audience slideshow directly to the selected display in borderless fullscreen.'
+      : 'Select a secondary monitor with Detect Monitor first.';
   }
 
   async function resolveSelectedScreen(saved) {
@@ -980,38 +980,43 @@
     }
 
     const targetScreen = await resolveSelectedScreen(monitor);
-    const left = Number(targetScreen?.availLeft ?? targetScreen?.left ?? monitor.left ?? 0);
-    const top = Number(targetScreen?.availTop ?? targetScreen?.top ?? monitor.top ?? 0);
-    const width = Number(targetScreen?.availWidth ?? targetScreen?.width ?? monitor.width ?? screen.availWidth ?? 1280);
-    const height = Number(targetScreen?.availHeight ?? targetScreen?.height ?? monitor.height ?? screen.availHeight ?? 720);
-
-    // Preserve the genuine ONLYOFFICE slideshow browsing context by moving this
-    // existing top-level browser window instead of recreating the presentation.
-    try { window.moveTo(Math.round(left), Math.round(top)); } catch (_) {}
-    try { window.resizeTo(Math.round(width), Math.round(height)); } catch (_) {}
-
-    document.body.classList.add('onlyoffice-audience-monitor-mode');
-
-    // Chromium's multi-screen Fullscreen API can target a specific ScreenDetailed.
-    // Fall back to ordinary fullscreen if that option is not accepted.
-    const root = document.documentElement;
-    try {
-      if (!document.fullscreenElement && root.requestFullscreen) {
-        if (targetScreen) {
-          try { await root.requestFullscreen({ screen: targetScreen, navigationUI: 'hide' }); }
-          catch (_) { await root.requestFullscreen({ navigationUI: 'hide' }); }
-        } else {
-          await root.requestFullscreen({ navigationUI: 'hide' });
-        }
+    if (!targetScreen) {
+      if (status) {
+        status.textContent = 'Chrome could not resolve the selected monitor. Run Detect Monitor again and allow window-management permission.';
+        status.classList.add('show');
       }
-    } catch (error) {
-      // The window is still moved/resized even when browser policy denies fullscreen.
-      console.warn('Fullscreen request was denied:', error);
+      return;
     }
 
-    if (status) {
-      status.textContent = 'Audience view sent to the selected monitor. Press Esc to leave fullscreen.';
-      status.classList.add('show');
+    const modal = document.getElementById('pptx-editor-modal');
+    if (!modal || !modal.requestFullscreen) {
+      if (status) {
+        status.textContent = 'This browser does not support the required fullscreen API.';
+        status.classList.add('show');
+      }
+      return;
+    }
+
+    // The native ONLYOFFICE Presenter View popup stays on the operator screen.
+    // We fullscreen ONLY the existing audience editor/modal directly onto the
+    // monitor chosen by Detect Monitor. This avoids dragging or moving the
+    // main Chrome window and preserves the same native slideshow session.
+    document.body.classList.add('onlyoffice-audience-monitor-mode');
+
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      await modal.requestFullscreen({ screen: targetScreen, navigationUI: 'hide' });
+      if (status) {
+        status.textContent = 'Audience slideshow sent to the selected monitor. Press Esc to leave fullscreen.';
+        status.classList.add('show');
+      }
+    } catch (error) {
+      document.body.classList.remove('onlyoffice-audience-monitor-mode');
+      console.warn('Selected-monitor fullscreen was denied:', error);
+      if (status) {
+        status.textContent = 'Chrome blocked selected-monitor fullscreen. Allow Window management / pop-ups for this site, then click Send to Monitor again.';
+        status.classList.add('show');
+      }
     }
   };
 
@@ -1020,6 +1025,11 @@
       document.body.classList.remove('onlyoffice-audience-monitor-mode');
     }
   });
+
+  setSendMonitorButtonVisible(true);
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => setSendMonitorButtonVisible(true), { once:true });
+  }
 
   const hostObserver = new MutationObserver(() => sendToEditor(readMonitor()));
   const startObserver = () => {

@@ -1836,7 +1836,7 @@
           <div id="pptx-editor-file-name" class="status-text">No presentation loaded</div>
         </div>
         <div class="onlyoffice-editor-actions">
-          <button id="onlyoffice-send-monitor-btn" type="button" style="display:none;background:#6d28d9;" onclick="sendOnlyOfficeAudienceToSelectedMonitor()">🖥️ Send to Monitor</button>
+          <button id="onlyoffice-send-monitor-btn" type="button" style="background:#6d28d9;" onclick="sendOnlyOfficeAudienceToSelectedMonitor()">🖥️ Send to Monitor</button>
           <button id="onlyoffice-close-btn" type="button" style="background:#444;" onclick="closeOnlyOfficeEditor(false)">Close</button>
         </div>
       </div>
@@ -2491,6 +2491,14 @@ body.onlyoffice-audience-monitor-mode #pptx-editor-modal #onlyoffice-editor-prog
 body.onlyoffice-audience-monitor-mode #pptx-editor-modal #onlyoffice-editor-progress-label{display:none!important}
 body.onlyoffice-audience-monitor-mode #pptx-editor-modal .onlyoffice-editor-host{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;background:#000!important}
 body.onlyoffice-audience-monitor-mode #pptx-editor-modal .onlyoffice-editor-host iframe{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;margin:0!important;padding:0!important;display:block!important;background:#000!important}
+#pptx-editor-modal:fullscreen{width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:#000!important}
+#pptx-editor-modal:fullscreen .onlyoffice-editor-box{position:absolute!important;inset:0!important;width:100vw!important;height:100vh!important;max-width:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#000!important}
+#pptx-editor-modal:fullscreen .onlyoffice-editor-header,
+#pptx-editor-modal:fullscreen #onlyoffice-editor-status,
+#pptx-editor-modal:fullscreen #onlyoffice-editor-progress,
+#pptx-editor-modal:fullscreen #onlyoffice-editor-progress-label{display:none!important}
+#pptx-editor-modal:fullscreen .onlyoffice-editor-host{position:absolute!important;inset:0!important;width:100vw!important;height:100vh!important;margin:0!important;padding:0!important;border:0!important;background:#000!important}
+#pptx-editor-modal:fullscreen .onlyoffice-editor-host iframe{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;margin:0!important;padding:0!important;display:block!important;background:#000!important}
 
 </style>
 
