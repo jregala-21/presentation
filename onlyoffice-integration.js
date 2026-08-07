@@ -965,15 +965,15 @@
     }
     if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_OPENED') {
       setSendMonitorButtonVisible(true);
-      if (data.role === 'presenter') nativePresenterViewOpen = true;
-      const role = data.role === 'presenter' ? 'Presenter View' : 'slideshow window';
+      if (data.role === 'presenter' || data.role === 'unknown') nativePresenterViewOpen = true;
+      const role = data.role === 'presenter' ? 'Presenter View' : (data.role === 'unknown' ? 'Presenter View window' : 'slideshow window');
       const status = document.getElementById('onlyoffice-editor-status');
       if (status) {
         status.textContent = `ONLYOFFICE native ${role} opened. Automatic monitor placement is active.`;
         status.classList.add('show');
       }
     }
-    if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_CLOSED' && data.role === 'presenter') {
+    if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_CLOSED' && (data.role === 'presenter' || data.role === 'unknown')) {
       nativePresenterViewOpen = false;
       returnAudienceToPrimary('Slideshow ended. Audience view returned to the primary screen.');
     }
