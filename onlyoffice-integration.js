@@ -1091,10 +1091,36 @@
     }
   };
 
+  async function secureAudienceAfterFullscreenExit() {
+    // When Presenter View ends (Esc / End slideshow), the embedded PPTX editor
+    // returns to the operator/primary screen. Before the secondary audience
+    // display is exposed again, force the configured safety background ON.
+    try {
+      if (typeof window.setOnlyOfficeExtenderBackground === 'function') {
+        await window.setOnlyOfficeExtenderBackground(true);
+      } else {
+        const safetyChannel = new BroadcastChannel('switcher_broadcast_stream');
+        safetyChannel.postMessage({ command: 'TOGGLE_FTG_STATE', active: true });
+        safetyChannel.postMessage({ command: 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND', active: true });
+        setTimeout(() => { try { safetyChannel.close(); } catch (_) {} }, 500);
+      }
+    } catch (error) {
+      console.warn('Could not arm audience safety background after fullscreen exit:', error);
+    }
+
+    const status = document.getElementById('onlyoffice-editor-status');
+    if (status) {
+      status.textContent = 'Presenter view ended. Audience display was covered with the selected background.';
+      status.classList.add('show');
+    }
+  }
+
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
+      const wasAudienceFullscreen = audienceFullscreenActive || document.body.classList.contains('onlyoffice-audience-monitor-mode');
       audienceFullscreenActive = false;
       document.body.classList.remove('onlyoffice-audience-monitor-mode');
+      if (wasAudienceFullscreen) void secureAudienceAfterFullscreenExit();
     }
   });
 
