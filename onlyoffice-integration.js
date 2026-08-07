@@ -864,6 +864,48 @@
     }
   })();
 
+  let nativePresenterViewOpen = false;
+  let audienceFullscreenActive = false;
+  let audienceReturnInProgress = false;
+
+  function openPresenterRequiredModal() {
+    const modal = document.getElementById('onlyoffice-presenter-required-modal');
+    if (modal) modal.classList.add('open');
+  }
+
+  window.closeOnlyOfficePresenterRequiredModal = function() {
+    const modal = document.getElementById('onlyoffice-presenter-required-modal');
+    if (modal) modal.classList.remove('open');
+  };
+
+  function setAudiencePrivacyShield(active) {
+    document.body.classList.toggle('onlyoffice-audience-privacy-shield', Boolean(active));
+  }
+
+  async function returnAudienceToPrimary(reason = '') {
+    if (audienceReturnInProgress) return;
+    if (!audienceFullscreenActive && !document.fullscreenElement) return;
+    audienceReturnInProgress = true;
+    setAudiencePrivacyShield(true);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    } catch (error) {
+      console.warn('Unable to leave audience fullscreen:', error);
+    } finally {
+      audienceFullscreenActive = false;
+      document.body.classList.remove('onlyoffice-audience-monitor-mode');
+      setTimeout(() => {
+        setAudiencePrivacyShield(false);
+        audienceReturnInProgress = false;
+      }, 250);
+      const status = document.getElementById('onlyoffice-editor-status');
+      if (status && reason) {
+        status.textContent = reason;
+        status.classList.add('show');
+      }
+    }
+  }
+
   function readMonitor() {
     try { return JSON.parse(localStorage.getItem(MONITOR_KEY) || 'null'); }
     catch (_) { return null; }
@@ -923,12 +965,17 @@
     }
     if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_OPENED') {
       setSendMonitorButtonVisible(true);
+      if (data.role === 'presenter') nativePresenterViewOpen = true;
       const role = data.role === 'presenter' ? 'Presenter View' : 'slideshow window';
       const status = document.getElementById('onlyoffice-editor-status');
       if (status) {
         status.textContent = `ONLYOFFICE native ${role} opened. Automatic monitor placement is active.`;
         status.classList.add('show');
       }
+    }
+    if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_CLOSED' && data.role === 'presenter') {
+      nativePresenterViewOpen = false;
+      returnAudienceToPrimary('Slideshow ended. Audience view returned to the primary screen.');
     }
   });
 
@@ -979,6 +1026,15 @@
       return;
     }
 
+    if (!nativePresenterViewOpen) {
+      openPresenterRequiredModal();
+      if (status) {
+        status.textContent = 'Open ONLYOFFICE Show presenter view first, then click Send to Monitor.';
+        status.classList.add('show');
+      }
+      return;
+    }
+
     const targetScreen = await resolveSelectedScreen(monitor);
     if (!targetScreen) {
       if (status) {
@@ -1006,6 +1062,7 @@
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
       await modal.requestFullscreen({ screen: targetScreen, navigationUI: 'hide' });
+      audienceFullscreenActive = true;
       if (status) {
         status.textContent = 'Audience slideshow sent to the selected monitor. Press Esc to leave fullscreen.';
         status.classList.add('show');
@@ -1022,6 +1079,7 @@
 
   document.addEventListener('fullscreenchange', () => {
     if (!document.fullscreenElement) {
+      audienceFullscreenActive = false;
       document.body.classList.remove('onlyoffice-audience-monitor-mode');
     }
   });

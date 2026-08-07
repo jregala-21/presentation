@@ -1549,6 +1549,20 @@
     #pptx-editor-font-size{width:92px;margin:0;padding:9px 10px;background:var(--input-bg);border:1px solid var(--border);border-radius:7px;color:var(--text)}
     @media(max-width:800px){.pptx-editor-layout{grid-template-columns:1fr;grid-template-rows:150px minmax(0,1fr)}.pptx-editor-slide-list{flex-direction:row;overflow-x:auto;overflow-y:hidden}.pptx-editor-slide-button{min-width:180px}.pptx-editor-box{overflow:auto}.pptx-editor-layout{height:auto}}
   </style>
+
+<style id="onlyoffice-audience-safety-style">
+.onlyoffice-presenter-required-modal{z-index:2147483600!important;}
+.onlyoffice-presenter-required-box{width:min(430px,92vw)!important;max-width:430px!important;padding:24px!important;}
+.onlyoffice-presenter-required-icon{font-size:42px;text-align:center;margin-bottom:10px;}
+body.onlyoffice-audience-privacy-shield #pptx-editor-modal::after{content:"";position:fixed;inset:0;background:#000;z-index:2147483646;pointer-events:auto;}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen{background:#000!important;padding:0!important;margin:0!important;border:0!important;}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen .onlyoffice-editor-box{width:100vw!important;height:100vh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#000!important;}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen .onlyoffice-editor-header,
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-editor-status,
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-editor-progress,
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-editor-progress-label{display:none!important;}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-editor-host{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;background:#000!important;}
+</style>
 </head>
 <body>
   <div id="intro-loading-screen" class="intro-loading-screen" aria-live="polite">
@@ -1845,6 +1859,17 @@
       <div id="onlyoffice-editor-progress-label" class="canva-pdf-progress-label">0%</div>
       <div id="onlyoffice-editor-host" class="onlyoffice-editor-host">
         <div class="status-text">Choose a PowerPoint file to begin.</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="onlyoffice-presenter-required-modal" class="modal-overlay onlyoffice-presenter-required-modal" onclick="closeOnlyOfficePresenterRequiredModal()">
+    <div class="modal-box onlyoffice-presenter-required-box" onclick="event.stopPropagation()" role="alertdialog" aria-modal="true" aria-labelledby="onlyoffice-presenter-required-title">
+      <div class="onlyoffice-presenter-required-icon">🖥️</div>
+      <div id="onlyoffice-presenter-required-title" class="modal-title" style="text-align:center;margin-bottom:8px;">Open Presenter View First</div>
+      <div class="status-text" style="text-align:center;line-height:1.55;">In ONLYOFFICE, choose <b>Show presenter view</b> first. When the Presenter View controller is open, click <b>Send to Monitor</b> again.</div>
+      <div style="display:flex;justify-content:center;margin-top:18px;">
+        <button type="button" style="background:#6d28d9;min-width:120px;" onclick="closeOnlyOfficePresenterRequiredModal()">OK</button>
       </div>
     </div>
   </div>
