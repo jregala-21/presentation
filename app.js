@@ -2399,6 +2399,14 @@
       updateDisplayToggleButton();
     }
 
+    // Exposed for the PPTX-only Extender. Stop Presenting uses this after the
+    // safety background has faded in so the secondary audience window closes
+    // without ever revealing the PowerPoint editor.
+    window.closeOnlyOfficeAudienceDisplay = function() {
+      closeDisplayScreen();
+      return true;
+    };
+
     async function buildAudienceMediaLayer(payload) {
       const layer = document.createElement('div');
       layer.className = 'audience-media-layer';
@@ -12266,13 +12274,34 @@ downloadCloudFileToRoot = async function(fileId) {
   const EXTENDER_DISPLAY_STATE = 'JIL_ONLYOFFICE_EXTENDER_DISPLAY_STATE';
   let onlyOfficeExtenderWindow = null;
 
-  function currentOnlyOfficeExtenderState() {
+  function resolveOnlyOfficeExtenderBackgroundSource() {
     const filename = localStorage.getItem(LS_BG_TARGET) || '';
+    let source = currentBackgroundSource || '';
+
+    // The saved background name can exist before currentBackgroundSource is
+    // restored (for example when the PPTX Extender opens immediately). Resolve
+    // it directly from the workspace image map so the controller does not show
+    // a false "No background selected" state.
+    if (!source && filename && typeof discoveredWorkspaceImages === 'object' && discoveredWorkspaceImages) {
+      source = discoveredWorkspaceImages[filename] || '';
+    }
+
+    if (source && source !== currentBackgroundSource) {
+      currentBackgroundSource = source;
+      try { updateLiveMonitorOverlays(); } catch (_) {}
+      try { channel.postMessage({ command: 'UPDATE_BACKGROUND_SOURCE', value: source }); } catch (_) {}
+    }
+
+    return { filename, source };
+  }
+
+  function currentOnlyOfficeExtenderState() {
+    const background = resolveOnlyOfficeExtenderBackgroundSource();
     return {
       active: Boolean(isFTGActive),
-      filename,
-      hasBackground: Boolean(filename && currentBackgroundSource),
-      source: currentBackgroundSource || '',
+      filename: background.filename,
+      hasBackground: Boolean(background.filename && background.source),
+      source: background.source || '',
       displayOpen: Boolean(displayWindow && !displayWindow.closed),
       monitorSelected: Boolean(selectedMonitor || getStoredSelectedMonitor())
     };
@@ -12294,9 +12323,10 @@ downloadCloudFileToRoot = async function(fileId) {
 
   async function setOnlyOfficeExtenderBackground(active) {
     const desired = Boolean(active);
-    const filename = localStorage.getItem(LS_BG_TARGET) || '';
-    if (desired && !filename) {
-      showModal('Background Image Required', 'Choose a background image in the main website before turning the audience background on.', false);
+    const background = resolveOnlyOfficeExtenderBackgroundSource();
+    const filename = background.filename;
+    if (desired && (!filename || !background.source)) {
+      showModal('Background Image Required', 'Choose a background image in the main website and make sure the workspace folder is connected before turning the audience background on.', false);
       publishOnlyOfficeExtenderState();
       return false;
     }
@@ -12401,7 +12431,9 @@ downloadCloudFileToRoot = async function(fileId) {
     }
     // Keep the audience safety background armed, but do NOT open Display Screen here.
     await setOnlyOfficeExtenderBackground(true);
-    setTimeout(publishOnlyOfficeExtenderState, 400);
+    setTimeout(publishOnlyOfficeExtenderState, 250);
+    setTimeout(publishOnlyOfficeExtenderState, 900);
+    setTimeout(publishOnlyOfficeExtenderState, 1800);
   };
 
   async function openOnlyOfficeDisplayFromExtender() {

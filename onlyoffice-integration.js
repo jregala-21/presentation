@@ -1094,9 +1094,9 @@
   window.stopOnlyOfficePresenting = async function(reason = 'Presentation stopped.') {
     const status = document.getElementById('onlyoffice-editor-status');
 
-    // First cover the audience with the configured background. The cover itself
-    // has a short opacity transition so the audience never sees the PPTX editor
-    // while fullscreen is being released.
+    // 1) Cover the secondary audience output first. This is deliberately done
+    // before fullscreen/window teardown so the PPTX editor can never flash to
+    // the audience while Presenter View is closing.
     try {
       if (typeof window.setOnlyOfficeExtenderBackground === 'function') {
         await window.setOnlyOfficeExtenderBackground(true);
@@ -1110,27 +1110,50 @@
       console.warn('Unable to enable the audience safety background before stopping:', error);
     }
 
-    // Give the background fade enough time to fully cover the secondary monitor.
-    await new Promise(resolve => setTimeout(resolve, 520));
-
+    // Let the cover complete its fade before anything underneath is removed.
+    await new Promise(resolve => setTimeout(resolve, 560));
     setAudiencePrivacyShield(true);
+
+    // 2) Close the separate Display Screen, if the Extender opened one.
+    try {
+      if (typeof window.closeOnlyOfficeAudienceDisplay === 'function') {
+        window.closeOnlyOfficeAudienceDisplay();
+      } else {
+        const closeChannel = new BroadcastChannel('switcher_broadcast_stream');
+        closeChannel.postMessage({ command: 'CLOSE_DISPLAY' });
+        setTimeout(() => { try { closeChannel.close(); } catch (_) {} }, 300);
+      }
+    } catch (error) {
+      console.warn('Unable to close the audience Display Screen:', error);
+    }
+
+    // 3) Leave the selected-monitor fullscreen audience surface.
     try {
       if (document.fullscreenElement) await document.exitFullscreen();
     } catch (error) {
       console.warn('Unable to exit audience fullscreen while stopping:', error);
     }
-
     audienceFullscreenActive = false;
     document.body.classList.remove('onlyoffice-audience-monitor-mode');
 
-    // Bring the original presenter website back to the operator on the primary
-    // display. requestFullscreen({screen}) never permanently moves this window,
-    // so exiting fullscreen reveals/focuses its primary-screen browser window.
+    // 4) Close the PPTX editor itself. The operator is returned to the normal
+    // main website on the primary display instead of leaving the editor visible.
+    try {
+      if (typeof window.closeOnlyOfficeEditor === 'function') {
+        await window.closeOnlyOfficeEditor(true);
+      } else {
+        document.getElementById('pptx-editor-modal')?.classList.remove('open');
+      }
+    } catch (error) {
+      console.warn('Unable to close ONLYOFFICE editor after presenting:', error);
+    }
+
+    // 5) Bring the main presenter website back to the operator screen.
     try { window.focus(); } catch (_) {}
-    setTimeout(() => setAudiencePrivacyShield(false), 180);
+    setTimeout(() => setAudiencePrivacyShield(false), 220);
 
     if (status) {
-      status.textContent = reason || 'Presentation stopped. Audience is covered and control returned to the primary screen.';
+      status.textContent = reason || 'Presentation stopped. Audience output closed and the main website returned to the primary screen.';
       status.classList.add('show');
     }
     return true;

@@ -50,6 +50,8 @@
   const SET = 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND';
   const STATE = 'JIL_ONLYOFFICE_EXTENDER_STATE';
   const STOP_PRESENTING = 'JIL_ONLYOFFICE_STOP_PRESENTING';
+  const BG_SOURCE = 'UPDATE_BACKGROUND_SOURCE';
+  const BG_BLOB = 'SET_DISPLAY_BACKGROUND_BLOB_V29';
   const button = document.getElementById('background-toggle');
   const stopButton = document.getElementById('stop-presenting');
   const name = document.getElementById('background-name');
@@ -60,6 +62,25 @@
   const preview = document.getElementById('background-preview');
   let current = {active:false,hasBackground:false,filename:'',source:'',displayOpen:false,monitorSelected:false};
   let lastStateAt = 0;
+  let previewSource = '';
+  let previewObjectUrl = '';
+
+  function setPreviewSource(source) {
+    if (!source) return;
+    previewSource = source;
+    preview.src = source;
+    screen.classList.add('has-bg');
+    screen.classList.remove('no-bg');
+  }
+
+  function setPreviewBlob(blob) {
+    if (!(blob instanceof Blob) || !blob.size) return;
+    if (previewObjectUrl) {
+      try { URL.revokeObjectURL(previewObjectUrl); } catch (_) {}
+    }
+    previewObjectUrl = URL.createObjectURL(blob);
+    setPreviewSource(previewObjectUrl);
+  }
 
   function render(state) {
     current = Object.assign({}, current, state || {}); lastStateAt = Date.now();
@@ -72,7 +93,11 @@
     button.textContent = current.active ? '🖼️ Background Off' : '🖼️ Background On';
     stateLabel.textContent = current.active ? 'BACKGROUND ON' : 'BACKGROUND OFF';
     stateLabel.style.color = current.active ? '#ff8794' : '#82e6aa';
-    if (current.source) { preview.src = current.source; screen.classList.add('has-bg'); screen.classList.remove('no-bg'); }
+    // Do not clear a valid Blob preview just because the state packet carries
+    // an empty/temporary source. The Display Screen often receives the selected
+    // background as a Blob, so the Extender mirrors that same Blob directly.
+    if (current.source) setPreviewSource(current.source);
+    else if (previewSource) setPreviewSource(previewSource);
     else { preview.removeAttribute('src'); screen.classList.remove('has-bg'); screen.classList.add('no-bg'); }
     status.textContent = current.hasBackground ? (current.active ? 'Audience is covered by the selected background.' : 'Audience cover is off — PowerPoint may be visible.') : (current.filename ? 'Background is selected but its image source is still syncing from the main website…' : 'Choose a background in the main website first.');
   }
@@ -98,7 +123,12 @@
   }
   stopButton.addEventListener('click',stopPresenting);
   button.addEventListener('click',()=>setBackground(!Boolean(current.active)));
-  channel.addEventListener('message',e=>{const m=e.data||{};if(m.command===STATE)render(m.state)});
+  channel.addEventListener('message',e=>{
+    const m=e.data||{};
+    if(m.command===STATE) render(m.state);
+    else if(m.command===BG_SOURCE && m.value) setPreviewSource(m.value);
+    else if(m.command===BG_BLOB && m.blob) setPreviewBlob(m.blob);
+  });
   window.addEventListener('message',e=>{if(e.origin!==window.location.origin)return;const m=e.data||{};if(m.command===STATE)render(m.state)});
   requestState(); setInterval(()=>{requestState();if(Date.now()-lastStateAt>5000){connection.classList.remove('connected');connection.lastElementChild.textContent='Reconnecting'}},1800);
 })();
