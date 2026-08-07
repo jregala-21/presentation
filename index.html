@@ -1836,6 +1836,7 @@
           <div id="pptx-editor-file-name" class="status-text">No presentation loaded</div>
         </div>
         <div class="onlyoffice-editor-actions">
+          <button id="onlyoffice-send-monitor-btn" type="button" style="display:none;background:#6d28d9;" onclick="sendOnlyOfficeAudienceToSelectedMonitor()">🖥️ Send to Monitor</button>
           <button id="onlyoffice-close-btn" type="button" style="background:#444;" onclick="closeOnlyOfficeEditor(false)">Close</button>
         </div>
       </div>
@@ -2481,5 +2482,15 @@
 #onlyoffice-editor-progress{margin:0 14px;height:4px}
 #onlyoffice-editor-progress-label{padding:0 14px 4px}
 @media(max-width:800px){.onlyoffice-editor-box{width:100vw!important;height:100vh!important}.onlyoffice-editor-header{align-items:flex-start}.onlyoffice-editor-actions button{font-size:11px;padding:7px 9px}}
+body.onlyoffice-audience-monitor-mode{overflow:hidden!important;background:#000!important}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;background:#000!important;padding:0!important;margin:0!important}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal .onlyoffice-editor-box{position:fixed!important;inset:0!important;width:100vw!important;max-width:none!important;height:100vh!important;border:0!important;border-radius:0!important;box-shadow:none!important;margin:0!important;padding:0!important;background:#000!important}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal .onlyoffice-editor-header,
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal #onlyoffice-editor-status,
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal #onlyoffice-editor-progress,
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal #onlyoffice-editor-progress-label{display:none!important}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal .onlyoffice-editor-host{position:fixed!important;inset:0!important;width:100vw!important;height:100vh!important;background:#000!important}
+body.onlyoffice-audience-monitor-mode #pptx-editor-modal .onlyoffice-editor-host iframe{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;border:0!important;margin:0!important;padding:0!important;display:block!important;background:#000!important}
+
 </style>
 

@@ -911,6 +911,8 @@
 
   window.addEventListener('jil-selected-monitor-changed', event => {
     window.syncOnlyOfficeAudienceMonitor(event.detail || readMonitor());
+    const button = document.getElementById('onlyoffice-send-monitor-btn');
+    if (button && button.style.display !== 'none') button.disabled = !readMonitor();
   });
 
   window.addEventListener('message', event => {
@@ -920,12 +922,102 @@
       window.syncOnlyOfficeAudienceMonitor(readMonitor());
     }
     if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_OPENED') {
+      setSendMonitorButtonVisible(true);
       const role = data.role === 'presenter' ? 'Presenter View' : 'slideshow window';
       const status = document.getElementById('onlyoffice-editor-status');
       if (status) {
         status.textContent = `ONLYOFFICE native ${role} opened. Automatic monitor placement is active.`;
         status.classList.add('show');
       }
+    }
+  });
+
+
+  function setSendMonitorButtonVisible(visible) {
+    const button = document.getElementById('onlyoffice-send-monitor-btn');
+    if (!button) return;
+    const monitor = readMonitor();
+    button.style.display = visible ? '' : 'none';
+    button.disabled = !monitor;
+    button.title = monitor
+      ? 'Move the current ONLYOFFICE audience view to the selected display and enter fullscreen.'
+      : 'Select a secondary monitor first.';
+  }
+
+  async function resolveSelectedScreen(saved) {
+    if (!saved || !('getScreenDetails' in window)) return null;
+    try {
+      const details = await window.getScreenDetails();
+      const screens = Array.from(details.screens || []);
+      if (!screens.length) return null;
+      const cx = Number(saved.left || 0) + Number(saved.width || 0) / 2;
+      const cy = Number(saved.top || 0) + Number(saved.height || 0) / 2;
+      return screens.find(screen => {
+        const left = Number(screen.availLeft ?? screen.left ?? 0);
+        const top = Number(screen.availTop ?? screen.top ?? 0);
+        const width = Number(screen.availWidth ?? screen.width ?? 0);
+        const height = Number(screen.availHeight ?? screen.height ?? 0);
+        return cx >= left && cx < left + width && cy >= top && cy < top + height;
+      }) || screens.find(screen => {
+        const left = Number(screen.availLeft ?? screen.left ?? 0);
+        const top = Number(screen.availTop ?? screen.top ?? 0);
+        return Math.abs(left - Number(saved.left || 0)) < 8 && Math.abs(top - Number(saved.top || 0)) < 8;
+      }) || null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  window.sendOnlyOfficeAudienceToSelectedMonitor = async function() {
+    const monitor = readMonitor();
+    const status = document.getElementById('onlyoffice-editor-status');
+    if (!monitor) {
+      if (status) {
+        status.textContent = 'Select the audience display with Detect Monitor first.';
+        status.classList.add('show');
+      }
+      return;
+    }
+
+    const targetScreen = await resolveSelectedScreen(monitor);
+    const left = Number(targetScreen?.availLeft ?? targetScreen?.left ?? monitor.left ?? 0);
+    const top = Number(targetScreen?.availTop ?? targetScreen?.top ?? monitor.top ?? 0);
+    const width = Number(targetScreen?.availWidth ?? targetScreen?.width ?? monitor.width ?? screen.availWidth ?? 1280);
+    const height = Number(targetScreen?.availHeight ?? targetScreen?.height ?? monitor.height ?? screen.availHeight ?? 720);
+
+    // Preserve the genuine ONLYOFFICE slideshow browsing context by moving this
+    // existing top-level browser window instead of recreating the presentation.
+    try { window.moveTo(Math.round(left), Math.round(top)); } catch (_) {}
+    try { window.resizeTo(Math.round(width), Math.round(height)); } catch (_) {}
+
+    document.body.classList.add('onlyoffice-audience-monitor-mode');
+
+    // Chromium's multi-screen Fullscreen API can target a specific ScreenDetailed.
+    // Fall back to ordinary fullscreen if that option is not accepted.
+    const root = document.documentElement;
+    try {
+      if (!document.fullscreenElement && root.requestFullscreen) {
+        if (targetScreen) {
+          try { await root.requestFullscreen({ screen: targetScreen, navigationUI: 'hide' }); }
+          catch (_) { await root.requestFullscreen({ navigationUI: 'hide' }); }
+        } else {
+          await root.requestFullscreen({ navigationUI: 'hide' });
+        }
+      }
+    } catch (error) {
+      // The window is still moved/resized even when browser policy denies fullscreen.
+      console.warn('Fullscreen request was denied:', error);
+    }
+
+    if (status) {
+      status.textContent = 'Audience view sent to the selected monitor. Press Esc to leave fullscreen.';
+      status.classList.add('show');
+    }
+  };
+
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+      document.body.classList.remove('onlyoffice-audience-monitor-mode');
     }
   });
 
