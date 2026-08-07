@@ -65,7 +65,7 @@
     current = Object.assign({}, current, state || {}); lastStateAt = Date.now();
     connection.classList.add('connected'); connection.lastElementChild.textContent = 'Connected';
     name.textContent = current.filename || 'No background selected';
-    button.disabled = !current.hasBackground;
+    button.disabled = !current.filename;
     displayButton.disabled = !current.monitorSelected;
     displayButton.classList.toggle('open', Boolean(current.displayOpen));
     displayButton.textContent = current.displayOpen ? '🖥️ Display Screen Open' : '🖥️ Open Display Screen';
@@ -75,7 +75,7 @@
     stateLabel.style.color = current.active ? '#ff8794' : '#82e6aa';
     if (current.source) { preview.src = current.source; screen.classList.add('has-bg'); screen.classList.remove('no-bg'); }
     else { preview.removeAttribute('src'); screen.classList.remove('has-bg'); screen.classList.add('no-bg'); }
-    status.textContent = current.hasBackground ? (current.active ? 'Audience is covered by the selected background.' : 'Audience cover is off — PowerPoint may be visible.') : 'Choose a background in the main website first.';
+    status.textContent = current.hasBackground ? (current.active ? 'Audience is covered by the selected background.' : 'Audience cover is off — PowerPoint may be visible.') : (current.filename ? 'Background is selected but its image source is still syncing from the main website…' : 'Choose a background in the main website first.');
   }
   function requestState(){ channel.postMessage({command:READY}); try{window.opener?.postMessage({command:READY},window.location.origin)}catch(_){} }
   function setBackground(active){ channel.postMessage({command:SET,active}); try{window.opener?.postMessage({command:SET,active},window.location.origin)}catch(_){} status.textContent=active?'Turning audience background on…':'Turning audience background off…'; }
