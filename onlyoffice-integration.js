@@ -1015,7 +1015,7 @@
     }
   }
 
-  window.sendOnlyOfficeAudienceToSelectedMonitor = async function() {
+  window.sendOnlyOfficeAudienceToSelectedMonitor = function() {
     const monitor = readMonitor();
     const status = document.getElementById('onlyoffice-editor-status');
     if (!monitor) {
@@ -1026,10 +1026,20 @@
       return;
     }
 
-    if (!nativePresenterViewOpen) {
-      openPresenterRequiredModal();
+    // Do not try to automatically detect whether ONLYOFFICE Presenter View is
+    // open. That state can live in a nested/cross-origin popup and is not
+    // reliable in every Document Server build. Instead, always show a short
+    // confirmation so the operator can verify Presenter View first.
+    openPresenterRequiredModal();
+  };
+
+  window.confirmOnlyOfficeAudienceToSelectedMonitor = async function() {
+    const monitor = readMonitor();
+    const status = document.getElementById('onlyoffice-editor-status');
+    window.closeOnlyOfficePresenterRequiredModal();
+    if (!monitor) {
       if (status) {
-        status.textContent = 'Open ONLYOFFICE Show presenter view first, then click Send to Monitor.';
+        status.textContent = 'Select the audience display with Detect Monitor first.';
         status.classList.add('show');
       }
       return;

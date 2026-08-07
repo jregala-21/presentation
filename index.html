@@ -1864,12 +1864,13 @@ body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-
   </div>
 
   <div id="onlyoffice-presenter-required-modal" class="modal-overlay onlyoffice-presenter-required-modal" onclick="closeOnlyOfficePresenterRequiredModal()">
-    <div class="modal-box onlyoffice-presenter-required-box" onclick="event.stopPropagation()" role="alertdialog" aria-modal="true" aria-labelledby="onlyoffice-presenter-required-title">
+    <div class="modal-box onlyoffice-presenter-required-box" onclick="event.stopPropagation()" role="dialog" aria-modal="true" aria-labelledby="onlyoffice-presenter-required-title">
       <div class="onlyoffice-presenter-required-icon">🖥️</div>
-      <div id="onlyoffice-presenter-required-title" class="modal-title" style="text-align:center;margin-bottom:8px;">Open Presenter View First</div>
-      <div class="status-text" style="text-align:center;line-height:1.55;">In ONLYOFFICE, choose <b>Show presenter view</b> first. When the Presenter View controller is open, click <b>Send to Monitor</b> again.</div>
-      <div style="display:flex;justify-content:center;margin-top:18px;">
-        <button type="button" style="background:#6d28d9;min-width:120px;" onclick="closeOnlyOfficePresenterRequiredModal()">OK</button>
+      <div id="onlyoffice-presenter-required-title" class="modal-title" style="text-align:center;margin-bottom:8px;">Before Sending to the Audience Monitor</div>
+      <div class="status-text" style="text-align:center;line-height:1.55;">Make sure you already clicked <b>Show presenter view</b> inside ONLYOFFICE and that the Presenter View controller is open on the primary monitor.</div>
+      <div style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-top:18px;">
+        <button type="button" style="background:#6d28d9;min-width:150px;" onclick="confirmOnlyOfficeAudienceToSelectedMonitor()">🖥️ Send to Monitor</button>
+        <button type="button" style="background:#444;min-width:120px;" onclick="closeOnlyOfficePresenterRequiredModal()">I'll check</button>
       </div>
     </div>
   </div>
