@@ -1091,6 +1091,59 @@
     }
   };
 
+  window.stopOnlyOfficePresenting = async function(reason = 'Presentation stopped.') {
+    const status = document.getElementById('onlyoffice-editor-status');
+
+    // First cover the audience with the configured background. The cover itself
+    // has a short opacity transition so the audience never sees the PPTX editor
+    // while fullscreen is being released.
+    try {
+      if (typeof window.setOnlyOfficeExtenderBackground === 'function') {
+        await window.setOnlyOfficeExtenderBackground(true);
+      } else {
+        const stopChannel = new BroadcastChannel('switcher_broadcast_stream');
+        stopChannel.postMessage({ command: 'TOGGLE_FTG_STATE', active: true });
+        stopChannel.postMessage({ command: 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND', active: true });
+        setTimeout(() => { try { stopChannel.close(); } catch (_) {} }, 900);
+      }
+    } catch (error) {
+      console.warn('Unable to enable the audience safety background before stopping:', error);
+    }
+
+    // Give the background fade enough time to fully cover the secondary monitor.
+    await new Promise(resolve => setTimeout(resolve, 520));
+
+    setAudiencePrivacyShield(true);
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+    } catch (error) {
+      console.warn('Unable to exit audience fullscreen while stopping:', error);
+    }
+
+    audienceFullscreenActive = false;
+    document.body.classList.remove('onlyoffice-audience-monitor-mode');
+
+    // Bring the original presenter website back to the operator on the primary
+    // display. requestFullscreen({screen}) never permanently moves this window,
+    // so exiting fullscreen reveals/focuses its primary-screen browser window.
+    try { window.focus(); } catch (_) {}
+    setTimeout(() => setAudiencePrivacyShield(false), 180);
+
+    if (status) {
+      status.textContent = reason || 'Presentation stopped. Audience is covered and control returned to the primary screen.';
+      status.classList.add('show');
+    }
+    return true;
+  };
+
+  const stopPresentingChannel = new BroadcastChannel('switcher_broadcast_stream');
+  stopPresentingChannel.addEventListener('message', event => {
+    const message = event && event.data;
+    if (message && message.command === 'JIL_ONLYOFFICE_STOP_PRESENTING') {
+      void window.stopOnlyOfficePresenting('Presentation stopped from the Extender.');
+    }
+  });
+
   async function secureAudienceAfterFullscreenExit() {
     // When Presenter View ends (Esc / End slideshow), the embedded PPTX editor
     // returns to the operator/primary screen. Before the secondary audience

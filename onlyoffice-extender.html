@@ -36,9 +36,9 @@
       <div><div class="eyebrow">Audience cover</div><h1>Background control</h1></div>
       <p class="desc">Keep this controller on the primary monitor. Turn the background on whenever you need to hide the PowerPoint output on the audience display.</p>
       <div class="bg-card"><div class="bg-label">Current background</div><div id="background-name" class="bg-name">Checking…</div></div>
-      <button id="open-display" class="display-btn" type="button">🖥️ Open Display Screen</button>
+      <button id="stop-presenting" class="display-btn stop-btn" type="button">⏹ Stop Presenting</button>
       <button id="background-toggle" class="toggle" type="button" disabled>🖼️ Background On</button>
-      <div class="hint"><strong>Open Display Screen</strong> sends the audience display to your selected secondary monitor with the safety background already on. <strong>Background Off</strong> reveals the ONLYOFFICE presentation when you are ready.</div>
+      <div class="hint"><strong>Stop Presenting</strong> smoothly covers the audience output, exits the secondary-monitor slideshow, and returns control to the main website on the primary monitor. <strong>Background On/Off</strong> remains available while presenting.</div>
       <div id="status" class="status">Connecting to the main presenter…</div>
     </aside>
   </main>
@@ -49,9 +49,9 @@
   const READY = 'JIL_ONLYOFFICE_EXTENDER_READY';
   const SET = 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND';
   const STATE = 'JIL_ONLYOFFICE_EXTENDER_STATE';
-  const OPEN_DISPLAY = 'JIL_ONLYOFFICE_EXTENDER_OPEN_DISPLAY';
+  const STOP_PRESENTING = 'JIL_ONLYOFFICE_STOP_PRESENTING';
   const button = document.getElementById('background-toggle');
-  const displayButton = document.getElementById('open-display');
+  const stopButton = document.getElementById('stop-presenting');
   const name = document.getElementById('background-name');
   const status = document.getElementById('status');
   const connection = document.getElementById('connection');
@@ -66,9 +66,8 @@
     connection.classList.add('connected'); connection.lastElementChild.textContent = 'Connected';
     name.textContent = current.filename || 'No background selected';
     button.disabled = !current.filename;
-    displayButton.disabled = !current.monitorSelected;
-    displayButton.classList.toggle('open', Boolean(current.displayOpen));
-    displayButton.textContent = current.displayOpen ? '🖥️ Display Screen Open' : '🖥️ Open Display Screen';
+    stopButton.disabled = false;
+    stopButton.textContent = '⏹ Stop Presenting';
     button.classList.toggle('active', Boolean(current.active));
     button.textContent = current.active ? '🖼️ Background Off' : '🖼️ Background On';
     stateLabel.textContent = current.active ? 'BACKGROUND ON' : 'BACKGROUND OFF';
@@ -79,20 +78,25 @@
   }
   function requestState(){ channel.postMessage({command:READY}); try{window.opener?.postMessage({command:READY},window.location.origin)}catch(_){} }
   function setBackground(active){ channel.postMessage({command:SET,active}); try{window.opener?.postMessage({command:SET,active},window.location.origin)}catch(_){} status.textContent=active?'Turning audience background on…':'Turning audience background off…'; }
-  function openDisplay(){
-    status.textContent='Opening Display Screen on the selected audience monitor…';
-    // Prefer a synchronous same-origin call so Chrome keeps this button click's
-    // user activation for window.open(). BroadcastChannel remains a fallback.
+  async function stopPresenting(){
+    stopButton.disabled = true;
+    stopButton.textContent = 'Stopping…';
+    status.textContent = 'Covering the audience and returning to the primary monitor…';
+    let handedOff = false;
     try {
-      if (window.opener && !window.opener.closed && typeof window.opener.openOnlyOfficeDisplayFromExtender === 'function') {
-        window.opener.openOnlyOfficeDisplayFromExtender();
-        return;
+      if (window.opener && !window.opener.closed && typeof window.opener.stopOnlyOfficePresenting === 'function') {
+        handedOff = true;
+        await window.opener.stopOnlyOfficePresenting('Stopped from ONLYOFFICE Extender');
       }
     } catch (_) {}
-    channel.postMessage({command:OPEN_DISPLAY});
-    try{window.opener?.postMessage({command:OPEN_DISPLAY},window.location.origin)}catch(_){}
+    if (!handedOff) {
+      channel.postMessage({command:STOP_PRESENTING});
+      try{window.opener?.postMessage({command:STOP_PRESENTING},window.location.origin)}catch(_){}
+    }
+    status.textContent = 'Presentation stopped. Returning to the main website…';
+    setTimeout(() => { try { window.close(); } catch (_) {} }, 650);
   }
-  displayButton.addEventListener('click',openDisplay);
+  stopButton.addEventListener('click',stopPresenting);
   button.addEventListener('click',()=>setBackground(!Boolean(current.active)));
   channel.addEventListener('message',e=>{const m=e.data||{};if(m.command===STATE)render(m.state)});
   window.addEventListener('message',e=>{if(e.origin!==window.location.origin)return;const m=e.data||{};if(m.command===STATE)render(m.state)});
