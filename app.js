@@ -12262,6 +12262,8 @@ downloadCloudFileToRoot = async function(fileId) {
   const EXTENDER_COMMAND = 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND';
   const EXTENDER_READY = 'JIL_ONLYOFFICE_EXTENDER_READY';
   const EXTENDER_STATE = 'JIL_ONLYOFFICE_EXTENDER_STATE';
+  const EXTENDER_OPEN_DISPLAY = 'JIL_ONLYOFFICE_EXTENDER_OPEN_DISPLAY';
+  const EXTENDER_DISPLAY_STATE = 'JIL_ONLYOFFICE_EXTENDER_DISPLAY_STATE';
   let onlyOfficeExtenderWindow = null;
 
   function currentOnlyOfficeExtenderState() {
@@ -12270,7 +12272,9 @@ downloadCloudFileToRoot = async function(fileId) {
       active: Boolean(isFTGActive),
       filename,
       hasBackground: Boolean(filename && currentBackgroundSource),
-      source: currentBackgroundSource || ''
+      source: currentBackgroundSource || '',
+      displayOpen: Boolean(displayWindow && !displayWindow.closed),
+      monitorSelected: Boolean(selectedMonitor || getStoredSelectedMonitor())
     };
   }
 
@@ -12373,41 +12377,61 @@ downloadCloudFileToRoot = async function(fileId) {
   window.openOnlyOfficeExtenderWindow = openOnlyOfficeExtenderWindow;
 
   window.prepareOnlyOfficeExtenderWindows = function() {
-    // This is called directly from the user's PPTX-open action so Chrome has
-    // a user gesture available for both popup windows.
+    // PPTX-only hook: reserve/open only the Extender controller.
+    // The audience Display Screen is opened manually from the Extender.
     selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
     if (!selectedMonitor) {
       showModal('Select Audience Monitor', 'Use Detect Monitor and select the secondary display before opening ONLYOFFICE.', false);
       return false;
     }
 
-    // Reserve/open the controller first. Browsers commonly allow only one
-    // automatic popup per user gesture; the Extender must not lose that slot.
+    // Open the PPTX Extender while the PPTX-open action still has a user gesture.
     if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
       openOnlyOfficeExtenderWindow();
-    }
-    if (!displayWindow || displayWindow.closed) {
-      openDisplayWindow();
     }
     return true;
   };
 
   window.activateOnlyOfficeExtenderSession = async function() {
+    // This function is called only by the PPTX/ONLYOFFICE workflow.
     selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
-    if (selectedMonitor && (!displayWindow || displayWindow.closed)) {
-      await openDisplayWindow();
-    }
     if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
       const extender = openOnlyOfficeExtenderWindow();
       if (!extender) setTimeout(showExtenderPopupBlockedModal, 120);
     }
-    // Audience display starts safely covered by the configured background.
+    // Keep the audience safety background armed, but do NOT open Display Screen here.
     await setOnlyOfficeExtenderBackground(true);
-    setTimeout(() => {
-      try { if (displayWindow && !displayWindow.closed) displayWindow.focus(); } catch (_) {}
-      publishOnlyOfficeExtenderState();
-    }, 700);
+    setTimeout(publishOnlyOfficeExtenderState, 400);
   };
+
+  async function openOnlyOfficeDisplayFromExtender() {
+    selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
+    if (!selectedMonitor) {
+      showModal('Select Audience Monitor', 'Use Detect Monitor in the main website and select the secondary display first.', false);
+      publishOnlyOfficeExtenderState();
+      return false;
+    }
+
+    // Cover first so no PPTX/editor frame flashes while the audience window opens.
+    await setOnlyOfficeExtenderBackground(true);
+
+    if (!displayWindow || displayWindow.closed) {
+      await openDisplayWindow();
+    } else {
+      try { displayWindow.focus(); } catch (_) {}
+    }
+
+    // Re-send the cover after the display has finished loading.
+    setTimeout(async () => {
+      try { await sendBackgroundToDisplayV29(true); } catch (_) {}
+      try { postPresenterMessageV29({ command: 'TOGGLE_FTG_STATE', active: true }); } catch (_) {}
+      publishOnlyOfficeExtenderState();
+    }, 500);
+    publishOnlyOfficeExtenderState();
+    return Boolean(displayWindow && !displayWindow.closed);
+  }
+
+  window.openOnlyOfficeDisplayFromExtender = openOnlyOfficeDisplayFromExtender;
 
   window.setOnlyOfficeExtenderBackground = setOnlyOfficeExtenderBackground;
   window.getOnlyOfficeExtenderState = currentOnlyOfficeExtenderState;
@@ -12417,6 +12441,8 @@ downloadCloudFileToRoot = async function(fileId) {
     if (!message) return;
     if (message.command === EXTENDER_COMMAND) {
       await setOnlyOfficeExtenderBackground(Boolean(message.active));
+    } else if (message.command === EXTENDER_OPEN_DISPLAY) {
+      await openOnlyOfficeDisplayFromExtender();
     } else if (message.command === EXTENDER_READY) {
       publishOnlyOfficeExtenderState();
     }
@@ -12427,6 +12453,8 @@ downloadCloudFileToRoot = async function(fileId) {
     const message = event.data || {};
     if (message.command === EXTENDER_COMMAND) {
       await setOnlyOfficeExtenderBackground(Boolean(message.active));
+    } else if (message.command === EXTENDER_OPEN_DISPLAY) {
+      await openOnlyOfficeDisplayFromExtender();
     } else if (message.command === EXTENDER_READY) {
       publishOnlyOfficeExtenderState();
     }
