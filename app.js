@@ -12308,19 +12308,69 @@ downloadCloudFileToRoot = async function(fileId) {
     return Boolean(isFTGActive) === desired;
   }
 
-  function openOnlyOfficeExtenderWindow() {
-    const url = new URL('onlyoffice-extender.html', window.location.href).href;
-    const width = 390;
-    const height = 250;
-    const left = Math.max(0, Number(window.screenX || 0) + 40);
-    const top = Math.max(0, Number(window.screenY || 0) + 70);
-    const features = `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes`;
-    onlyOfficeExtenderWindow = window.open(url, EXTENDER_WINDOW_NAME, features);
-    if (onlyOfficeExtenderWindow) {
-      try { onlyOfficeExtenderWindow.focus(); } catch (_) {}
-    }
-    return onlyOfficeExtenderWindow;
+  function extenderWindowFeatures() {
+    const width = Math.min(1180, Math.max(860, Number(window.screen?.availWidth || 1200) - 220));
+    const height = Math.min(760, Math.max(620, Number(window.screen?.availHeight || 800) - 160));
+    const left = Math.max(0, Number(window.screenX || 0) + 70);
+    const top = Math.max(0, Number(window.screenY || 0) + 55);
+    return `popup=yes,width=${Math.round(width)},height=${Math.round(height)},left=${Math.round(left)},top=${Math.round(top)},resizable=yes,scrollbars=yes`;
   }
+
+  function showExtenderPopupBlockedModal() {
+    let modal = document.getElementById('onlyoffice-extender-popup-modal');
+    if (!modal) {
+      modal = document.createElement('div');
+      modal.id = 'onlyoffice-extender-popup-modal';
+      modal.className = 'modal-overlay';
+      modal.style.zIndex = '2147483646';
+      modal.innerHTML = `
+        <div class="modal" style="width:min(92vw,520px);background:#141922;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:20px;color:#fff;box-shadow:0 24px 80px rgba(0,0,0,.55)">
+          <div style="font-size:12px;font-weight:900;letter-spacing:.12em;color:#8ab4ff;text-transform:uppercase;margin-bottom:8px">ONLYOFFICE Extender</div>
+          <h3 style="margin:0 0 10px;font-size:20px">Open the Extender controller</h3>
+          <p style="margin:0 0 18px;color:#b6c0d0;line-height:1.5">Chrome blocked the automatic controller window. Click below once to open the Extender in its own Chrome window. Keep this window on the primary monitor.</p>
+          <div style="display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap">
+            <button type="button" onclick="document.getElementById('onlyoffice-extender-popup-modal')?.classList.remove('open')" style="background:#333b49;color:#fff">Not now</button>
+            <button type="button" onclick="window.openOnlyOfficeExtenderWindow?.(true);document.getElementById('onlyoffice-extender-popup-modal')?.classList.remove('open')" style="background:#6d4aff;color:#fff">Open Extender Window</button>
+          </div>
+        </div>`;
+      document.body.appendChild(modal);
+    }
+    modal.classList.add('open');
+  }
+
+  function openOnlyOfficeExtenderWindow(fromFallbackClick = false) {
+    if (onlyOfficeExtenderWindow && !onlyOfficeExtenderWindow.closed) {
+      try { onlyOfficeExtenderWindow.focus(); } catch (_) {}
+      return onlyOfficeExtenderWindow;
+    }
+
+    const url = new URL('onlyoffice-extender.html', window.location.href).href;
+    // Open a blank same-origin window synchronously while the PPTX-open click is
+    // still a user gesture. Navigating it afterward is more reliable than doing
+    // work before window.open(), especially when the Display Screen is also used.
+    let popup = null;
+    try {
+      popup = window.open('about:blank', EXTENDER_WINDOW_NAME, extenderWindowFeatures());
+    } catch (_) {}
+
+    if (!popup) {
+      if (!fromFallbackClick) setTimeout(showExtenderPopupBlockedModal, 80);
+      return null;
+    }
+
+    onlyOfficeExtenderWindow = popup;
+    try {
+      popup.document.open();
+      popup.document.write('<!doctype html><title>Opening ONLYOFFICE Extender…</title><body style="margin:0;background:#0b0f16;color:#fff;font:600 16px system-ui;display:grid;place-items:center;min-height:100vh">Opening ONLYOFFICE Extender…</body>');
+      popup.document.close();
+    } catch (_) {}
+    try { popup.location.replace(url); } catch (_) { try { popup.location.href = url; } catch (_) {} }
+    try { popup.focus(); } catch (_) {}
+    setTimeout(publishOnlyOfficeExtenderState, 500);
+    return popup;
+  }
+
+  window.openOnlyOfficeExtenderWindow = openOnlyOfficeExtenderWindow;
 
   window.prepareOnlyOfficeExtenderWindows = function() {
     // This is called directly from the user's PPTX-open action so Chrome has
@@ -12331,11 +12381,13 @@ downloadCloudFileToRoot = async function(fileId) {
       return false;
     }
 
-    if (!displayWindow || displayWindow.closed) {
-      openDisplayWindow();
-    }
+    // Reserve/open the controller first. Browsers commonly allow only one
+    // automatic popup per user gesture; the Extender must not lose that slot.
     if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
       openOnlyOfficeExtenderWindow();
+    }
+    if (!displayWindow || displayWindow.closed) {
+      openDisplayWindow();
     }
     return true;
   };
@@ -12346,7 +12398,8 @@ downloadCloudFileToRoot = async function(fileId) {
       await openDisplayWindow();
     }
     if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
-      openOnlyOfficeExtenderWindow();
+      const extender = openOnlyOfficeExtenderWindow();
+      if (!extender) setTimeout(showExtenderPopupBlockedModal, 120);
     }
     // Audience display starts safely covered by the configured background.
     await setOnlyOfficeExtenderBackground(true);
