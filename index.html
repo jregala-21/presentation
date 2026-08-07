@@ -1563,6 +1563,13 @@ body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-
 body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-editor-progress-label{display:none!important;}
 body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-editor-host{position:absolute!important;inset:0!important;width:100%!important;height:100%!important;background:#000!important;}
 </style>
+<!-- ONLYOFFICE extender background overlay styles -->
+<style id="onlyoffice-extender-background-style">
+#onlyoffice-audience-background-cover{display:none;position:fixed;inset:0;z-index:2147483645;background:#000;align-items:center;justify-content:center;overflow:hidden;pointer-events:auto}
+#onlyoffice-audience-background-cover.active{display:flex!important}
+#onlyoffice-audience-background-cover img{width:100%;height:100%;object-fit:cover;display:block;background:#000}
+#pptx-editor-modal:fullscreen #onlyoffice-audience-background-cover{position:absolute;inset:0}
+</style>
 </head>
 <body>
   <div id="intro-loading-screen" class="intro-loading-screen" aria-live="polite">

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>ONLYOFFICE Audience Extender</title>
+  <style>
+    :root{color-scheme:dark;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%;background:#0d1017;color:#f6f7fb}
+    body{padding:18px;display:grid;place-items:center}
+    .card{width:min(360px,100%);background:#171c26;border:1px solid rgba(255,255,255,.12);border-radius:16px;padding:18px;box-shadow:0 18px 60px rgba(0,0,0,.45)}
+    .eyebrow{font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:#79b8ff}
+    h1{font-size:18px;margin:7px 0 6px}
+    p{font-size:12px;line-height:1.45;color:#aab3c5;margin:0 0 14px}
+    .bg-name{font-size:12px;padding:9px 10px;border-radius:9px;background:#0f131b;border:1px solid rgba(255,255,255,.08);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:12px}
+    button{width:100%;border:0;border-radius:10px;padding:12px 14px;font-weight:800;font-size:14px;cursor:pointer;background:#7c4dff;color:white}
+    button.active{background:#d94b5d}
+    button:disabled{opacity:.45;cursor:not-allowed}
+    .status{font-size:11px;color:#8f9bad;text-align:center;margin-top:10px;min-height:16px}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="eyebrow">Audience Safety Control</div>
+    <h1>ONLYOFFICE Extender</h1>
+    <p>Use the selected website background to temporarily cover the audience PowerPoint output.</p>
+    <div id="background-name" class="bg-name">Background: checking…</div>
+    <button id="background-toggle" type="button" disabled>🖼️ Background On</button>
+    <div id="status" class="status">Connecting to presenter…</div>
+  </main>
+<script>
+(() => {
+  const channel = new BroadcastChannel('switcher_broadcast_stream');
+  const READY = 'JIL_ONLYOFFICE_EXTENDER_READY';
+  const SET = 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND';
+  const STATE = 'JIL_ONLYOFFICE_EXTENDER_STATE';
+  const button = document.getElementById('background-toggle');
+  const name = document.getElementById('background-name');
+  const status = document.getElementById('status');
+  let current = {active:false,hasBackground:false,filename:''};
+
+  function render(state) {
+    current = Object.assign({}, current, state || {});
+    name.textContent = 'Background: ' + (current.filename || 'not selected');
+    button.disabled = !current.hasBackground;
+    button.classList.toggle('active', Boolean(current.active));
+    button.textContent = current.active ? '🖼️ Background Off' : '🖼️ Background On';
+    status.textContent = current.hasBackground
+      ? (current.active ? 'Audience background is ON.' : 'Audience background is OFF — PowerPoint may be visible.')
+      : 'Choose a background in the main website first.';
+  }
+
+  function requestState() {
+    channel.postMessage({command: READY});
+    try { window.opener?.postMessage({command: READY}, window.location.origin); } catch (_) {}
+  }
+
+  button.addEventListener('click', () => {
+    const active = !Boolean(current.active);
+    channel.postMessage({command: SET, active});
+    try { window.opener?.postMessage({command: SET, active}, window.location.origin); } catch (_) {}
+    status.textContent = active ? 'Turning audience background on…' : 'Turning audience background off…';
+  });
+
+  channel.addEventListener('message', event => {
+    const message = event.data || {};
+    if (message.command === STATE) render(message.state);
+  });
+  window.addEventListener('message', event => {
+    if (event.origin !== window.location.origin) return;
+    const message = event.data || {};
+    if (message.command === STATE) render(message.state);
+  });
+
+  requestState();
+  setInterval(requestState, 2500);
+})();
+</script>
+</body>
+</html>

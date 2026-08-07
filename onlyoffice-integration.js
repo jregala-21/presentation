@@ -128,6 +128,7 @@
     state.editor = new DocsAPI.DocEditor('onlyoffice-editor-host', result.config);
     $('pptx-editor-file-name').textContent = file.name;
     $('pptx-editor-modal').classList.add('open');
+    try { window.activateOnlyOfficeExtenderSession?.(); } catch (_) {}
     setProgress(100, 'Editor ready');
     setTimeout(() => setProgress(0, ''), 900);
   }
@@ -252,6 +253,7 @@
     state.editor = new DocsAPI.DocEditor('onlyoffice-editor-host', result.config);
     $('pptx-editor-file-name').textContent = fileName;
     $('pptx-editor-modal').classList.add('open');
+    try { window.activateOnlyOfficeExtenderSession?.(); } catch (_) {}
     setProgress(100, 'Editor ready');
     setStatus('Edit the PowerPoint in ONLYOFFICE. Close the editor when finished.', 'success');
     setTimeout(() => setProgress(0, ''), 900);
@@ -266,6 +268,7 @@
       if (input) input.value = '';
       return;
     }
+    try { window.prepareOnlyOfficeExtenderWindows?.(); } catch (_) {}
     setBusy(true); setStatus('Opening the local PowerPoint in ONLYOFFICE...'); setProgress(2, 'Preparing file');
     try {
       await createLocalEditorSession(file);
@@ -278,6 +281,7 @@
 
   window.prepareExistingDrivePptx = async function(fileRecord) {
     if (state.busy) return;
+    try { window.prepareOnlyOfficeExtenderWindows?.(); } catch (_) {}
     setBusy(true); setStatus('Opening existing cloud PowerPoint...');
     try { await createEditorSession(fileRecord); closeDrivePdfModal?.(); }
     catch (error) { setStatus('Editor failed: ' + (error.message || error), 'error'); throw error; }
@@ -1106,4 +1110,84 @@
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver, { once:true });
   else startObserver();
+})();
+
+/* ===== ONLYOFFICE extender background cover ===== */
+(() => {
+  'use strict';
+  const extenderChannel = new BroadcastChannel('switcher_broadcast_stream');
+  let coverActive = false;
+  let coverSource = '';
+  let coverObjectUrl = '';
+
+  function ensureCover() {
+    const modal = document.getElementById('pptx-editor-modal');
+    if (!modal) return null;
+    let cover = document.getElementById('onlyoffice-audience-background-cover');
+    if (!cover) {
+      cover = document.createElement('div');
+      cover.id = 'onlyoffice-audience-background-cover';
+      cover.setAttribute('aria-hidden', 'true');
+      modal.appendChild(cover);
+    }
+    return cover;
+  }
+
+  function renderCover() {
+    const cover = ensureCover();
+    if (!cover) return;
+    const shouldShow = Boolean(coverActive && (document.fullscreenElement || document.body.classList.contains('onlyoffice-audience-monitor-mode')));
+    cover.classList.toggle('active', shouldShow);
+    if (coverSource) {
+      let img = cover.querySelector('img');
+      if (!img) {
+        img = document.createElement('img');
+        img.alt = 'Audience background';
+        cover.replaceChildren(img);
+      }
+      if (img.src !== coverSource) img.src = coverSource;
+    } else if (!cover.firstChild) {
+      cover.textContent = '';
+    }
+  }
+
+  function updateFromBlob(message) {
+    if (coverObjectUrl) {
+      try { URL.revokeObjectURL(coverObjectUrl); } catch (_) {}
+      coverObjectUrl = '';
+    }
+    if (message && message.blob instanceof Blob && message.blob.size) {
+      coverObjectUrl = URL.createObjectURL(message.blob);
+      coverSource = coverObjectUrl;
+    }
+    if (message && typeof message.active === 'boolean') coverActive = message.active;
+    renderCover();
+  }
+
+  extenderChannel.addEventListener('message', event => {
+    const message = event && event.data;
+    if (!message) return;
+    if (message.command === 'UPDATE_BACKGROUND_SOURCE') {
+      coverSource = message.value || '';
+      renderCover();
+    } else if (message.command === 'TOGGLE_FTG_STATE') {
+      coverActive = Boolean(message.active);
+      renderCover();
+    } else if (message.command === 'SET_DISPLAY_BACKGROUND_BLOB_V29') {
+      updateFromBlob(message);
+    } else if (message.command === 'JIL_ONLYOFFICE_EXTENDER_STATE' && message.state) {
+      coverActive = Boolean(message.state.active);
+      if (message.state.source) coverSource = message.state.source;
+      renderCover();
+    }
+  });
+
+  document.addEventListener('fullscreenchange', () => setTimeout(renderCover, 0));
+  const observer = new MutationObserver(renderCover);
+  const start = () => {
+    ensureCover();
+    observer.observe(document.body, {attributes:true,attributeFilter:['class']});
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, {once:true});
+  else start();
 })();

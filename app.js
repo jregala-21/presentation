@@ -12253,3 +12253,133 @@ downloadCloudFileToRoot = async function(fileId) {
     return window.renderDrivePdfList();
   };
 })();
+
+/* ===== ONLYOFFICE audience extender controller ===== */
+(() => {
+  'use strict';
+
+  const EXTENDER_WINDOW_NAME = 'JILOnlyOfficeExtender';
+  const EXTENDER_COMMAND = 'JIL_ONLYOFFICE_EXTENDER_BACKGROUND';
+  const EXTENDER_READY = 'JIL_ONLYOFFICE_EXTENDER_READY';
+  const EXTENDER_STATE = 'JIL_ONLYOFFICE_EXTENDER_STATE';
+  let onlyOfficeExtenderWindow = null;
+
+  function currentOnlyOfficeExtenderState() {
+    const filename = localStorage.getItem(LS_BG_TARGET) || '';
+    return {
+      active: Boolean(isFTGActive),
+      filename,
+      hasBackground: Boolean(filename && currentBackgroundSource),
+      source: currentBackgroundSource || ''
+    };
+  }
+
+  function publishOnlyOfficeExtenderState() {
+    const state = currentOnlyOfficeExtenderState();
+    try { channel.postMessage({ command: EXTENDER_STATE, state }); } catch (_) {}
+    try {
+      if (onlyOfficeExtenderWindow && !onlyOfficeExtenderWindow.closed) {
+        onlyOfficeExtenderWindow.postMessage({ command: EXTENDER_STATE, state }, window.location.origin);
+      }
+    } catch (_) {}
+    try {
+      window.dispatchEvent(new CustomEvent('jil-onlyoffice-background-state', { detail: state }));
+    } catch (_) {}
+    return state;
+  }
+
+  async function setOnlyOfficeExtenderBackground(active) {
+    const desired = Boolean(active);
+    const filename = localStorage.getItem(LS_BG_TARGET) || '';
+    if (desired && !filename) {
+      showModal('Background Image Required', 'Choose a background image in the main website before turning the audience background on.', false);
+      publishOnlyOfficeExtenderState();
+      return false;
+    }
+
+    if (Boolean(isFTGActive) !== desired) {
+      await Promise.resolve(toggleFadeToBackground());
+    } else {
+      try { await sendBackgroundToDisplayV29(desired); } catch (_) {}
+      try { postPresenterMessageV29({ command: 'TOGGLE_FTG_STATE', active: desired }); } catch (_) {}
+    }
+
+    publishOnlyOfficeExtenderState();
+    return Boolean(isFTGActive) === desired;
+  }
+
+  function openOnlyOfficeExtenderWindow() {
+    const url = new URL('onlyoffice-extender.html', window.location.href).href;
+    const width = 390;
+    const height = 250;
+    const left = Math.max(0, Number(window.screenX || 0) + 40);
+    const top = Math.max(0, Number(window.screenY || 0) + 70);
+    const features = `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes`;
+    onlyOfficeExtenderWindow = window.open(url, EXTENDER_WINDOW_NAME, features);
+    if (onlyOfficeExtenderWindow) {
+      try { onlyOfficeExtenderWindow.focus(); } catch (_) {}
+    }
+    return onlyOfficeExtenderWindow;
+  }
+
+  window.prepareOnlyOfficeExtenderWindows = function() {
+    // This is called directly from the user's PPTX-open action so Chrome has
+    // a user gesture available for both popup windows.
+    selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
+    if (!selectedMonitor) {
+      showModal('Select Audience Monitor', 'Use Detect Monitor and select the secondary display before opening ONLYOFFICE.', false);
+      return false;
+    }
+
+    if (!displayWindow || displayWindow.closed) {
+      openDisplayWindow();
+    }
+    if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
+      openOnlyOfficeExtenderWindow();
+    }
+    return true;
+  };
+
+  window.activateOnlyOfficeExtenderSession = async function() {
+    selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
+    if (selectedMonitor && (!displayWindow || displayWindow.closed)) {
+      await openDisplayWindow();
+    }
+    if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
+      openOnlyOfficeExtenderWindow();
+    }
+    // Audience display starts safely covered by the configured background.
+    await setOnlyOfficeExtenderBackground(true);
+    setTimeout(() => {
+      try { if (displayWindow && !displayWindow.closed) displayWindow.focus(); } catch (_) {}
+      publishOnlyOfficeExtenderState();
+    }, 700);
+  };
+
+  window.setOnlyOfficeExtenderBackground = setOnlyOfficeExtenderBackground;
+  window.getOnlyOfficeExtenderState = currentOnlyOfficeExtenderState;
+
+  channel.addEventListener('message', async event => {
+    const message = event && event.data;
+    if (!message) return;
+    if (message.command === EXTENDER_COMMAND) {
+      await setOnlyOfficeExtenderBackground(Boolean(message.active));
+    } else if (message.command === EXTENDER_READY) {
+      publishOnlyOfficeExtenderState();
+    }
+  });
+
+  window.addEventListener('message', async event => {
+    if (event.origin !== window.location.origin) return;
+    const message = event.data || {};
+    if (message.command === EXTENDER_COMMAND) {
+      await setOnlyOfficeExtenderBackground(Boolean(message.active));
+    } else if (message.command === EXTENDER_READY) {
+      publishOnlyOfficeExtenderState();
+    }
+  });
+
+  window.addEventListener('storage', event => {
+    if (event.key === LS_BG_TARGET) publishOnlyOfficeExtenderState();
+  });
+})();
