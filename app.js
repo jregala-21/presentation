@@ -2746,6 +2746,8 @@
       if (!screen) return;
       selectedMonitor = monitorIdentity(screen, pendingMonitorIndex);
       localStorage.setItem(LS_SELECTED_MONITOR, JSON.stringify(selectedMonitor));
+      try { window.dispatchEvent(new CustomEvent('jil-selected-monitor-changed', { detail: selectedMonitor })); } catch (_) {}
+      try { if (typeof window.syncOnlyOfficeAudienceMonitor === 'function') window.syncOnlyOfficeAudienceMonitor(selectedMonitor); } catch (_) {}
       updateSelectedMonitorButton();
       closeMonitorSelectionModal();
       showModal('Display Monitor Selected', `${selectedMonitor.label} (${selectedMonitor.width} × ${selectedMonitor.height}) will be used when you open the display screen.`, false);

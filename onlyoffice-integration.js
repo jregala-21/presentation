@@ -76,297 +76,6 @@
     });
   }
 
-  let selectedMonitorPresentationWindow = null;
-  let presenterControlWindow = null;
-  const PRESENTER_SYNC_CHANNEL = 'jil_onlyoffice_presenter_sync_v2';
-  const presenterSyncChannel = ('BroadcastChannel' in window) ? new BroadcastChannel(PRESENTER_SYNC_CHANNEL) : null;
-
-  function readSelectedMonitor() {
-    try {
-      return JSON.parse(localStorage.getItem('mps_selected_monitor_v1') || 'null');
-    } catch (_) {
-      return null;
-    }
-  }
-
-  function safeTitle(value) {
-    return String(value || 'Presentation').replace(/[<>&"]/g, '');
-  }
-
-  function writeAudienceShell(popup, title) {
-    popup.document.open();
-    popup.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>${safeTitle(title)}</title>
-<style>
-html,body,#onlyoffice-audience-host{width:100%;height:100%;margin:0;overflow:hidden;background:#000}
-body{font-family:Arial,sans-serif}.loading{position:fixed;inset:0;display:grid;place-items:center;color:#fff;background:#000;font-size:20px;z-index:10}
-</style>
-</head><body><div id="onlyoffice-audience-loading" class="loading">Loading presentation…</div><div id="onlyoffice-audience-host"></div></body></html>`);
-    popup.document.close();
-  }
-
-  function writePresenterShell(popup, title) {
-    popup.document.open();
-    popup.document.write(`<!doctype html>
-<html><head><meta charset="utf-8"><title>Presenter View - ${safeTitle(title)}</title>
-<style>
-:root{color-scheme:dark;font-family:Inter,Arial,sans-serif}*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;background:#202020;color:#fff;overflow:hidden}
-#presenter-root{height:100vh;display:grid;grid-template-rows:minmax(0,1fr) auto auto;background:#202020}
-#presenter-viewer{min-height:0;background:#272727;position:relative}
-#presenter-loading{position:absolute;inset:0;display:grid;place-items:center;background:#202020;color:#ddd;z-index:3;font-size:18px}
-#presenter-controls{display:flex;align-items:center;gap:10px;padding:10px 16px;background:#3a3a3a;border-top:1px solid #555;min-height:62px}
-#presenter-controls button{height:38px;border:1px solid #666;background:#494949;color:#fff;border-radius:4px;padding:0 14px;font-size:16px;cursor:pointer}
-#presenter-controls button:hover{background:#5a5a5a}#presenter-controls button.end{margin-left:auto;background:#444}#presenter-controls button.end:hover{background:#6b3030}
-#presenter-timer{font-variant-numeric:tabular-nums;font-size:17px;min-width:86px}#presenter-slide-number{font-size:16px;min-width:110px;text-align:center}
-#presenter-notes{min-height:92px;max-height:24vh;overflow:auto;padding:12px 18px;background:#242424;border-top:1px solid #424242;color:#ddd;font-size:16px;line-height:1.45}
-#presenter-notes.empty{color:#888;font-style:italic}
-@media(max-width:850px){#presenter-controls{gap:6px;padding:8px}#presenter-controls button{padding:0 9px;font-size:14px}#presenter-notes{min-height:70px}}
-</style></head><body>
-<div id="presenter-root">
-  <div id="presenter-viewer"><div id="presenter-loading">Loading Presenter View…</div><div id="onlyoffice-presenter-host" style="width:100%;height:100%"></div></div>
-  <div id="presenter-controls">
-    <span id="presenter-timer">00:00:00</span>
-    <button id="presenter-pause">⏸ Pause</button>
-    <button id="presenter-reset">Reset</button>
-    <button id="presenter-prev">◀</button>
-    <span id="presenter-slide-number">Slide 1</span>
-    <button id="presenter-next">▶</button>
-    <button id="presenter-end" class="end">End slideshow</button>
-  </div>
-  <div id="presenter-notes" class="empty">Speaker notes will appear here when available.</div>
-</div>
-</body></html>`);
-    popup.document.close();
-  }
-
-  async function loadOnlyOfficeApiInWindow(targetWindow, apiUrl) {
-    if (targetWindow.DocsAPI) return;
-    await new Promise((resolve, reject) => {
-      const script = targetWindow.document.createElement('script');
-      script.src = apiUrl;
-      script.async = true;
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Unable to load ONLYOFFICE presentation player.'));
-      targetWindow.document.head.appendChild(script);
-    });
-    if (!targetWindow.DocsAPI) throw new Error('ONLYOFFICE presentation player is unavailable.');
-  }
-
-  function sendPresenterCommand(type, payload = {}) {
-    if (!presenterSyncChannel) return;
-    presenterSyncChannel.postMessage(Object.assign({ source: 'presenter-host', type, at: Date.now() }, payload));
-  }
-
-  function setupPresenterControls(popup) {
-    if (!popup || popup.closed) return;
-    const d = popup.document;
-    const timerEl = d.getElementById('presenter-timer');
-    const slideEl = d.getElementById('presenter-slide-number');
-    const notesEl = d.getElementById('presenter-notes');
-    const pauseBtn = d.getElementById('presenter-pause');
-    let currentIndex = 0;
-    let slideCount = 0;
-    let paused = false;
-    let startedAt = Date.now();
-    let pausedAt = 0;
-    let pausedTotal = 0;
-
-    function renderSlideNumber() {
-      if (slideEl) slideEl.textContent = slideCount ? `Slide ${currentIndex + 1} of ${slideCount}` : `Slide ${currentIndex + 1}`;
-    }
-
-    function renderNotes(notes) {
-      if (!notesEl) return;
-      const value = String(notes || '').trim();
-      notesEl.textContent = value || 'Speaker notes will appear here when available.';
-      notesEl.classList.toggle('empty', !value);
-    }
-
-    const timer = popup.setInterval(() => {
-      const now = paused ? pausedAt : Date.now();
-      const elapsed = Math.max(0, now - startedAt - pausedTotal);
-      const total = Math.floor(elapsed / 1000);
-      const hh = String(Math.floor(total / 3600)).padStart(2, '0');
-      const mm = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
-      const ss = String(total % 60).padStart(2, '0');
-      if (timerEl) timerEl.textContent = `${hh}:${mm}:${ss}`;
-    }, 250);
-
-    const onMessage = event => {
-      const msg = event && event.data || {};
-      if (!msg || msg.source !== 'onlyoffice-plugin') return;
-      if (msg.type === 'slidechange') {
-        currentIndex = Math.max(0, Number(msg.index) || 0);
-        renderSlideNumber();
-        sendPresenterCommand('goto', { index: currentIndex });
-      } else if (msg.type === 'meta') {
-        currentIndex = Math.max(0, Number(msg.index) || currentIndex);
-        slideCount = Math.max(0, Number(msg.count) || slideCount);
-        renderSlideNumber();
-        renderNotes(msg.notes);
-      }
-    };
-    presenterSyncChannel?.addEventListener('message', onMessage);
-
-    d.getElementById('presenter-prev')?.addEventListener('click', () => {
-      currentIndex = Math.max(0, currentIndex - 1);
-      renderSlideNumber();
-      sendPresenterCommand('goto', { index: currentIndex });
-    });
-    d.getElementById('presenter-next')?.addEventListener('click', () => {
-      currentIndex = slideCount ? Math.min(slideCount - 1, currentIndex + 1) : currentIndex + 1;
-      renderSlideNumber();
-      sendPresenterCommand('goto', { index: currentIndex });
-    });
-    pauseBtn?.addEventListener('click', () => {
-      paused = !paused;
-      if (paused) {
-        pausedAt = Date.now();
-        pauseBtn.textContent = '▶ Resume';
-        sendPresenterCommand('pause');
-      } else {
-        pausedTotal += Date.now() - pausedAt;
-        pauseBtn.textContent = '⏸ Pause';
-        sendPresenterCommand('resume');
-      }
-    });
-    d.getElementById('presenter-reset')?.addEventListener('click', () => {
-      startedAt = Date.now(); pausedAt = 0; pausedTotal = 0; paused = false;
-      if (pauseBtn) pauseBtn.textContent = '⏸ Pause';
-      sendPresenterCommand('resume');
-    });
-    d.getElementById('presenter-end')?.addEventListener('click', () => {
-      sendPresenterCommand('end');
-      try { if (selectedMonitorPresentationWindow && !selectedMonitorPresentationWindow.closed) selectedMonitorPresentationWindow.close(); } catch (_) {}
-      try { popup.close(); } catch (_) {}
-    });
-    popup.addEventListener('beforeunload', () => {
-      popup.clearInterval(timer);
-      try { presenterSyncChannel?.removeEventListener('message', onMessage); } catch (_) {}
-    });
-    popup.addEventListener('keydown', event => {
-      if (event.key === 'ArrowRight' || event.key === 'PageDown' || event.key === ' ') {
-        event.preventDefault(); d.getElementById('presenter-next')?.click();
-      } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
-        event.preventDefault(); d.getElementById('presenter-prev')?.click();
-      } else if (event.key === 'Escape') {
-        d.getElementById('presenter-end')?.click();
-      }
-    });
-    renderSlideNumber();
-    setTimeout(() => sendPresenterCommand('request-meta', { index: currentIndex }), 1200);
-  }
-
-  async function requestFullscreenForWindow(targetWindow) {
-    if (!targetWindow || targetWindow.closed) return;
-    try {
-      const root = targetWindow.document.documentElement;
-      if (root && root.requestFullscreen) await root.requestFullscreen();
-    } catch (_) {
-      // Browser may require the fullscreen call to originate from the newly opened window.
-    }
-  }
-
-  window.presentOnlyOfficeOnSelectedMonitor = async function() {
-    if (!state.sessionId || !state.sessionToken) {
-      setStatus('Open a PowerPoint file in ONLYOFFICE first.', 'error');
-      return;
-    }
-
-    const monitor = readSelectedMonitor();
-    if (!monitor) {
-      setStatus('Select a display first using Detect Monitor in the main presenter window.', 'error');
-      return;
-    }
-
-    const width = Math.max(640, Number(monitor.width) || 1280);
-    const height = Math.max(480, Number(monitor.height) || 720);
-    const left = Number.isFinite(Number(monitor.left)) ? Number(monitor.left) : window.screenX + window.outerWidth;
-    const top = Number.isFinite(Number(monitor.top)) ? Number(monitor.top) : 0;
-    const features = `popup=yes,width=${width},height=${height},left=${left},top=${top}`;
-
-    selectedMonitorPresentationWindow = window.open('', 'OnlyOfficeSelectedMonitorPresentation', features);
-    if (!selectedMonitorPresentationWindow) {
-      setStatus('The presentation window was blocked. Allow pop-ups for this site and try again.', 'error');
-      return;
-    }
-
-    presenterControlWindow = window.open('', 'OnlyOfficePresenterControl', 'popup=yes,width=1320,height=900,left=40,top=40');
-    if (!presenterControlWindow) {
-      try { selectedMonitorPresentationWindow.close(); } catch (_) {}
-      setStatus('The Presenter View window was blocked. Allow pop-ups for this site and try again.', 'error');
-      return;
-    }
-
-    writeAudienceShell(selectedMonitorPresentationWindow, state.sourceFileName || 'Presentation');
-    // Attempt true browser fullscreen while this function still has the user's click activation.
-    // If Chromium/macOS refuses it, the popup is still positioned and resized to the selected monitor.
-    requestFullscreenForWindow(selectedMonitorPresentationWindow);
-    writePresenterShell(presenterControlWindow, state.sourceFileName || 'Presentation');
-    setupPresenterControls(presenterControlWindow);
-
-    try {
-      selectedMonitorPresentationWindow.moveTo(left, top);
-      selectedMonitorPresentationWindow.resizeTo(width, height);
-      selectedMonitorPresentationWindow.focus();
-      presenterControlWindow.focus();
-    } catch (_) {}
-
-    try {
-      setStatus(`Opening full-screen audience presentation on ${monitor.label || 'the selected monitor'} and Presenter View on this screen…`);
-      const [audienceResult, presenterResult] = await Promise.all([
-        postBridge(`/api/sessions/${encodeURIComponent(state.sessionId)}/view-config`, { sessionToken: state.sessionToken, mode: 'live' }),
-        postBridge(`/api/sessions/${encodeURIComponent(state.sessionId)}/view-config`, { sessionToken: state.sessionToken, mode: 'presenter' })
-      ]);
-
-      await Promise.all([
-        loadOnlyOfficeApiInWindow(selectedMonitorPresentationWindow, audienceResult.apiUrl),
-        loadOnlyOfficeApiInWindow(presenterControlWindow, presenterResult.apiUrl)
-      ]);
-
-      const audienceLoading = selectedMonitorPresentationWindow.document.getElementById('onlyoffice-audience-loading');
-      const audienceConfig = Object.assign({}, audienceResult.config, { width: '100%', height: '100%' });
-      audienceConfig.events = Object.assign({}, audienceConfig.events || {}, {
-        onDocumentReady() {
-          if (audienceLoading) audienceLoading.remove();
-          requestFullscreenForWindow(selectedMonitorPresentationWindow);
-        },
-        onError(event) {
-          const detail = event?.data?.errorDescription || event?.data?.errorCode || 'Presentation player error';
-          if (audienceLoading) audienceLoading.textContent = String(detail);
-        }
-      });
-      selectedMonitorPresentationWindow.__onlyOfficeAudienceEditor = new selectedMonitorPresentationWindow.DocsAPI.DocEditor('onlyoffice-audience-host', audienceConfig);
-
-      const presenterLoading = presenterControlWindow.document.getElementById('presenter-loading');
-      const presenterConfig = Object.assign({}, presenterResult.config, { width: '100%', height: '100%' });
-      presenterConfig.events = Object.assign({}, presenterConfig.events || {}, {
-        onDocumentReady() {
-          if (presenterLoading) presenterLoading.remove();
-          sendPresenterCommand('goto', { index: 0 });
-          sendPresenterCommand('request-meta', { index: 0 });
-        },
-        onError(event) {
-          const detail = event?.data?.errorDescription || event?.data?.errorCode || 'Presenter View error';
-          if (presenterLoading) presenterLoading.textContent = String(detail);
-        }
-      });
-      presenterControlWindow.__onlyOfficePresenterEditor = new presenterControlWindow.DocsAPI.DocEditor('onlyoffice-presenter-host', presenterConfig);
-      presenterControlWindow.focus();
-      setStatus(`Presentation started on ${monitor.label || 'the selected monitor'}. Presenter View is open on this screen.`, 'success');
-    } catch (error) {
-      try {
-        const loading = selectedMonitorPresentationWindow.document.getElementById('onlyoffice-audience-loading');
-        if (loading) loading.textContent = error.message || String(error);
-      } catch (_) {}
-      try {
-        const loading = presenterControlWindow.document.getElementById('presenter-loading');
-        if (loading) loading.textContent = error.message || String(error);
-      } catch (_) {}
-      setStatus('Unable to start Presenter View: ' + (error.message || error), 'error');
-    }
-  };
-
 
   async function createLocalEditorSession(file) {
     setProgress(12, 'Sending PowerPoint to local bridge');
@@ -1134,4 +843,97 @@ body{font-family:Arial,sans-serif}.loading{position:fixed;inset:0;display:grid;p
       size: staged.googleDrive.size || staged.onlyOffice?.fileSize || 0
     });
   };
+})();
+
+
+/* JIL native ONLYOFFICE presenter monitor bridge.
+ * Passes the website's selected display geometry into the self-hosted
+ * ONLYOFFICE presentation editor. The Docker-side helper uses it when
+ * ONLYOFFICE opens native Presenter/Reporter and slideshow windows.
+ */
+(() => {
+  'use strict';
+
+  const MONITOR_KEY = 'mps_selected_monitor_v1';
+  const OFFICE_ORIGIN = (() => {
+    try {
+      const configured = String(window.ONLYOFFICE_PUBLIC_URL || 'https://office.jilwanman.xyz');
+      return new URL(configured, window.location.href).origin;
+    } catch (_) {
+      return 'https://office.jilwanman.xyz';
+    }
+  })();
+
+  function readMonitor() {
+    try { return JSON.parse(localStorage.getItem(MONITOR_KEY) || 'null'); }
+    catch (_) { return null; }
+  }
+
+  function primaryGeometry() {
+    return {
+      left: Number(window.screen?.availLeft ?? window.screenX ?? 0),
+      top: Number(window.screen?.availTop ?? window.screenY ?? 0),
+      width: Number(window.screen?.availWidth ?? window.outerWidth ?? 1280),
+      height: Number(window.screen?.availHeight ?? window.outerHeight ?? 720)
+    };
+  }
+
+  function sendToEditor(monitor) {
+    const host = document.getElementById('onlyoffice-editor-host');
+    if (!host) return false;
+    const frames = Array.from(host.querySelectorAll('iframe'));
+    if (!frames.length) return false;
+    const payload = {
+      type: 'JIL_ONLYOFFICE_MONITOR_CONFIG',
+      monitor: monitor || readMonitor(),
+      primary: primaryGeometry(),
+      presenterOrigin: window.location.origin,
+      sentAt: Date.now()
+    };
+    frames.forEach(frame => {
+      try { frame.contentWindow?.postMessage(payload, OFFICE_ORIGIN); }
+      catch (_) {
+        try { frame.contentWindow?.postMessage(payload, '*'); } catch (_) {}
+      }
+    });
+    return true;
+  }
+
+  window.syncOnlyOfficeAudienceMonitor = function(monitor) {
+    const value = monitor || readMonitor();
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      const sent = sendToEditor(value);
+      if ((sent && attempts >= 4) || attempts >= 20) clearInterval(timer);
+    }, 300);
+  };
+
+  window.addEventListener('jil-selected-monitor-changed', event => {
+    window.syncOnlyOfficeAudienceMonitor(event.detail || readMonitor());
+  });
+
+  window.addEventListener('message', event => {
+    if (event.origin !== OFFICE_ORIGIN) return;
+    const data = event.data || {};
+    if (data.type === 'JIL_ONLYOFFICE_MONITOR_HELPER_READY') {
+      window.syncOnlyOfficeAudienceMonitor(readMonitor());
+    }
+    if (data.type === 'JIL_ONLYOFFICE_NATIVE_WINDOW_OPENED') {
+      const role = data.role === 'presenter' ? 'Presenter View' : 'slideshow window';
+      const status = document.getElementById('onlyoffice-editor-status');
+      if (status) {
+        status.textContent = `ONLYOFFICE native ${role} opened. Automatic monitor placement is active.`;
+        status.classList.add('show');
+      }
+    }
+  });
+
+  const hostObserver = new MutationObserver(() => sendToEditor(readMonitor()));
+  const startObserver = () => {
+    const host = document.getElementById('onlyoffice-editor-host');
+    if (host) hostObserver.observe(host, { childList: true, subtree: true });
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startObserver, { once:true });
+  else startObserver();
 })();
