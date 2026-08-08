@@ -14015,3 +14015,212 @@ downloadCloudFileToRoot = async function(fileId) {
     };
   }
 })();
+
+/* V75: Windows video stability pass.
+   - PDF presentation code is intentionally untouched.
+   - Display Screen owns all program audio and keeps exactly one active video.
+   - Operator Live View mirrors Preview with captureStream when available to avoid
+     decoding the same large video a second time on the main website.
+   - Duplicate Preview renders for the same scene/video are coalesced to prevent
+     the video controller from flickering on slower Windows laptops. */
+(() => {
+  if (window.__v75WindowsVideoStabilityInstalled) return;
+  window.__v75WindowsVideoStabilityInstalled = true;
+
+  const isDisplayV75 = () => document.body.classList.contains('live-window-mode');
+
+  function payloadV75() {
+    try { return window.staged || staged || null; } catch (_) { return window.staged || null; }
+  }
+
+  function videoSignatureV75(payload) {
+    if (!payload || payload.type !== 'video') return '';
+    return [
+      payload.sceneId || '',
+      payload.sceneItemIndex ?? '',
+      payload.itemId || payload.id || '',
+      payload.rootRelativePath || '',
+      payload.name || '',
+      typeof payload.value === 'string' ? payload.value.slice(0, 160) : ''
+    ].join('|');
+  }
+
+  function hardMuteV75(video) {
+    if (!video) return;
+    try { video.muted = true; } catch (_) {}
+    try { video.volume = 0; } catch (_) {}
+  }
+
+  function stopAndDetachV75(video) {
+    if (!video) return;
+    try { video.pause(); } catch (_) {}
+    hardMuteV75(video);
+    try { video.srcObject = null; } catch (_) {}
+    try { video.removeAttribute('src'); } catch (_) {}
+    try { video.load(); } catch (_) {}
+    try { video.remove(); } catch (_) {}
+  }
+
+  // MAIN WEBSITE: never allow local Preview/Live copies to make sound.
+  function silenceOperatorV75() {
+    if (isDisplayV75()) return;
+    document.querySelectorAll('video,audio').forEach(media => {
+      try { media.muted = true; media.volume = 0; } catch (_) {}
+    });
+  }
+
+  // DISPLAY SCREEN: exactly one video is allowed to exist as the audio/program master.
+  // This runs synchronously on play events and after DOM mutations so a duplicate video
+  // cannot continue playing underneath the current one.
+  let pruningV75 = false;
+  function enforceDisplayMasterV75(preferred = null) {
+    if (!isDisplayV75() || pruningV75) return;
+    pruningV75 = true;
+    try {
+      const audience = document.getElementById('audience-view');
+      const allVideos = Array.from(document.querySelectorAll('video'));
+      const audienceVideos = audience ? Array.from(audience.querySelectorAll('video')) : [];
+      if (!audienceVideos.length) {
+        allVideos.forEach(video => { try { video.pause(); } catch (_) {} hardMuteV75(video); });
+        return;
+      }
+
+      const validPreferred = preferred && audienceVideos.includes(preferred) ? preferred : null;
+      const named = audienceVideos.filter(video => video.id === 'audience-live-video');
+      const master = validPreferred || (named.length ? named[named.length - 1] : audienceVideos[audienceVideos.length - 1]);
+
+      allVideos.forEach(video => {
+        if (video === master) return;
+        // Destroy every other video, including stale hidden copies outside audience-view.
+        stopAndDetachV75(video);
+      });
+
+      try {
+        master.muted = false;
+        master.volume = 1;
+        master.playsInline = true;
+      } catch (_) {}
+    } finally {
+      pruningV75 = false;
+    }
+  }
+
+  document.addEventListener('play', event => {
+    const media = event.target;
+    if (!(media instanceof HTMLMediaElement)) return;
+    if (isDisplayV75() && media.tagName === 'VIDEO') {
+      enforceDisplayMasterV75(media);
+    } else if (!isDisplayV75()) {
+      hardMuteV75(media);
+    }
+  }, true);
+
+  const mediaObserverV75 = new MutationObserver(() => {
+    queueMicrotask(() => {
+      if (isDisplayV75()) enforceDisplayMasterV75();
+      else silenceOperatorV75();
+    });
+  });
+  const installMediaGuardV75 = () => {
+    mediaObserverV75.observe(document.documentElement, { childList: true, subtree: true });
+    if (isDisplayV75()) enforceDisplayMasterV75();
+    else silenceOperatorV75();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installMediaGuardV75, { once:true });
+  else installMediaGuardV75();
+
+  // Avoid a second local file decoder. The Preview video is already decoded for the
+  // operator controls, so mirror that decoded stream into Live View where Chromium
+  // supports captureStream(). Display Screen still receives its own independent video.
+  let mirroredOperatorV75 = null;
+  function mirrorPreviewIntoOperatorV75() {
+    if (isDisplayV75()) return;
+    const queued = payloadV75();
+    if (!queued || queued.type !== 'video') return;
+    const preview = document.querySelector('#preview-viewport video');
+    const operator = document.getElementById('operator-live-video');
+    if (!preview || !operator || operator === mirroredOperatorV75) return;
+    hardMuteV75(preview);
+    hardMuteV75(operator);
+
+    const capture = preview.captureStream || preview.mozCaptureStream;
+    if (typeof capture !== 'function') return; // Safe fallback: keep existing muted video.
+    try {
+      const stream = capture.call(preview);
+      if (!stream) return;
+      try { operator.pause(); } catch (_) {}
+      try { operator.removeAttribute('src'); } catch (_) {}
+      operator.srcObject = stream;
+      operator.autoplay = true;
+      operator.playsInline = true;
+      operator.muted = true;
+      operator.volume = 0;
+      operator.play().catch(() => {});
+      mirroredOperatorV75 = operator;
+    } catch (_) {
+      // captureStream is an optimization only; never disturb the proven fallback path.
+    }
+  }
+
+  const liveObserverV75 = new MutationObserver(() => requestAnimationFrame(mirrorPreviewIntoOperatorV75));
+  const installLiveMirrorV75 = () => {
+    const live = document.getElementById('live-viewport');
+    if (live && !isDisplayV75()) liveObserverV75.observe(live, { childList:true, subtree:true });
+    mirrorPreviewIntoOperatorV75();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', installLiveMirrorV75, { once:true });
+  else installLiveMirrorV75();
+
+  // Coalesce duplicate renderPreview calls for the same video. Older scene handlers and
+  // V74 can both request a render after one scene click; on Windows that briefly destroys
+  // and recreates the video toolbar. If the correct video is already mounted, keep it.
+  const previousRenderPreviewV75 = window.renderPreview;
+  let renderBusyV75 = false;
+  let renderPromiseV75 = null;
+  let lastRenderedSignatureV75 = '';
+
+  if (typeof previousRenderPreviewV75 === 'function') {
+    window.renderPreview = async function(...args) {
+      const current = payloadV75();
+      const signature = videoSignatureV75(current);
+      const existingVideo = document.querySelector('#preview-viewport video');
+      const existingToolbar = document.querySelector('#preview-viewport .video-toolbar');
+
+      if (signature && existingVideo && existingToolbar && signature === lastRenderedSignatureV75) {
+        hardMuteV75(existingVideo);
+        return;
+      }
+
+      if (renderBusyV75 && signature && signature === lastRenderedSignatureV75 && renderPromiseV75) {
+        return renderPromiseV75;
+      }
+
+      renderBusyV75 = true;
+      if (signature) lastRenderedSignatureV75 = signature;
+      renderPromiseV75 = Promise.resolve(previousRenderPreviewV75.apply(this, args))
+        .finally(() => {
+          renderBusyV75 = false;
+          const now = payloadV75();
+          const nowSignature = videoSignatureV75(now);
+          if (nowSignature) lastRenderedSignatureV75 = nowSignature;
+          const previewVideo = document.querySelector('#preview-viewport video');
+          if (previewVideo) hardMuteV75(previewVideo);
+          requestAnimationFrame(mirrorPreviewIntoOperatorV75);
+        });
+      return renderPromiseV75;
+    };
+  }
+
+  // After a scene selection settles, record the currently mounted video's signature so
+  // V74's follow-up render does not rebuild the same player/controller a second time.
+  document.addEventListener('click', event => {
+    if (!event.target?.closest?.('#scene-list .scene-item')) return;
+    setTimeout(() => {
+      const current = payloadV75();
+      if (current?.type === 'video' && document.querySelector('#preview-viewport video')) {
+        lastRenderedSignatureV75 = videoSignatureV75(current);
+        silenceOperatorV75();
+      }
+    }, 25);
+  }, false);
+})();
