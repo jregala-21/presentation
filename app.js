@@ -2000,6 +2000,75 @@
       const placeholderId = options.placeholderId || 'preview-placeholder';
       let placeholder = document.getElementById(placeholderId);
 
+      // V67: PDF slides render into a hidden replacement layer first. Keep the
+      // current canvas mounted until the next page has fully rendered so the
+      // Preview never flashes/clears while using the keyboard or slide browser.
+      if (payload && payload.type === 'pdf' && payload.value) {
+        if (!placeholder) {
+          placeholder = document.createElement('div');
+          placeholder.id = placeholderId;
+          placeholder.style.color = '#555';
+        }
+
+        const nextWrap = document.createElement('div');
+        nextWrap.className = 'v67-pdf-buffer-layer';
+        nextWrap.style.width = '100%';
+        nextWrap.style.height = '100%';
+        nextWrap.style.display = 'flex';
+        nextWrap.style.alignItems = 'center';
+        nextWrap.style.justifyContent = 'center';
+        nextWrap.style.opacity = '0';
+        nextWrap.style.position = 'absolute';
+        nextWrap.style.inset = '0';
+        nextWrap.style.pointerEvents = 'none';
+        target.appendChild(nextWrap);
+
+        try {
+          if (!options.readOnly) pdfDoc = null;
+          const loadingTask = pdfjsLib.getDocument(getPdfJsSource(payload));
+          const doc = await loadingTask.promise;
+          if (!options.readOnly) pdfDoc = doc;
+          const pageNum = Math.max(1, Math.min(payload.page || 1, doc.numPages));
+          if (!options.readOnly) staged.page = pageNum;
+
+          const page = await doc.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 1.6 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d', { alpha: false });
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.style.width = '100%';
+          canvas.style.height = '100%';
+          canvas.style.objectFit = 'contain';
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          nextWrap.appendChild(canvas);
+
+          // Swap only after the new canvas has painted at least once.
+          await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+          Array.from(target.children).forEach(child => {
+            if (child !== label && child !== nextWrap && !child.classList?.contains('pdf-live-nav')) child.remove();
+          });
+          nextWrap.style.position = '';
+          nextWrap.style.inset = '';
+          nextWrap.style.pointerEvents = '';
+          nextWrap.style.opacity = '1';
+
+          if (options.readOnly && target.id === 'live-viewport') {
+            addPdfLiveNavigation(target, pageNum, doc.numPages);
+          }
+        } catch (e) {
+          nextWrap.remove();
+          // Preserve the previous rendered page on failure. Only show an error
+          // if there was no previous PDF canvas to keep on screen.
+          if (!target.querySelector('canvas')) {
+            placeholder.style.color = '#ccc';
+            placeholder.textContent = 'PDF rendering failed';
+            target.appendChild(placeholder);
+          }
+        }
+        return;
+      }
+
       target.innerHTML = '';
       if (label) target.appendChild(label);
 
@@ -2496,6 +2565,13 @@
       if (token !== audienceTransitionToken) return;
 
       const oldLayers = Array.from(view.querySelectorAll(':scope > .audience-media-layer'));
+      // V67: stop the outgoing program video immediately when another scene is
+      // committed. This prevents its audio/playback continuing underneath the
+      // incoming image/PDF/Bible/video during a fade or dissolve.
+      oldLayers.forEach(layer => layer.querySelectorAll('video').forEach(video => {
+        try { video.pause(); } catch (_) {}
+        try { video.muted = true; video.volume = 0; } catch (_) {}
+      }));
       const bgLayer = document.getElementById('audience-bg-layer');
       if (bgLayer && bgLayer.parentNode !== view) view.appendChild(bgLayer);
 
@@ -12644,8 +12720,11 @@ downloadCloudFileToRoot = async function(fileId) {
     window.renderPreview = async function() {
       const payload = window.staged || (typeof staged !== 'undefined' ? staged : null);
       const smoothPdf = payload?.type === 'pdf';
-      const shield = smoothPdf ? makePreviewShieldV66() : null;
-      if (smoothPdf) showMainFileLoadingV66('Loading PDF…', payload?.name || `Page ${payload?.page || 1}`);
+      const pdfAlreadyVisible = Boolean(smoothPdf && document.querySelector('#preview-viewport canvas'));
+      // Initial PDF open gets normal loading feedback. Page-to-page navigation
+      // stays inside the Preview so the rest of the main UI does not flicker.
+      const shield = smoothPdf && !pdfAlreadyVisible ? makePreviewShieldV66() : null;
+      if (smoothPdf && !pdfAlreadyVisible) showMainFileLoadingV66('Loading PDF…', payload?.name || `Page ${payload?.page || 1}`);
       try {
         const result = await renderPreviewBeforeV66.apply(this, arguments);
         // Let the newly rendered canvas/image paint once before releasing the previous frame.
@@ -12653,7 +12732,7 @@ downloadCloudFileToRoot = async function(fileId) {
         return result;
       } finally {
         releasePreviewShieldV66(shield);
-        if (smoothPdf) hideMainFileLoadingV66();
+        if (smoothPdf && !pdfAlreadyVisible) hideMainFileLoadingV66();
       }
     };
   }
@@ -12754,4 +12833,87 @@ downloadCloudFileToRoot = async function(fileId) {
       goLiveRevealBusyV63 = false;
     }
   };
+})();
+
+
+/* V67: stop outgoing video on scene changes + keyboard-first PDF presenting. */
+(() => {
+  if (window.__v67MediaControlInstalled) return;
+  window.__v67MediaControlInstalled = true;
+
+  function sameProgramVideoV67(a, b) {
+    if (!a || !b || a.type !== 'video' || b.type !== 'video') return false;
+    if (a.itemId && b.itemId) return a.itemId === b.itemId;
+    return Boolean(a.value && b.value && a.value === b.value);
+  }
+
+  function stopVideoNodeV67(video, reset = false) {
+    if (!video) return;
+    try { video.pause(); } catch (_) {}
+    try { video.muted = true; video.volume = 0; } catch (_) {}
+    if (reset) { try { video.currentTime = 0; } catch (_) {} }
+  }
+
+  function stopOutgoingProgramVideoV67(reset = false) {
+    stopVideoNodeV67(document.getElementById('operator-live-video'), reset);
+    document.querySelectorAll('#live-viewport video, #operator-view video').forEach(v => stopVideoNodeV67(v, reset));
+    try { channel.postMessage({ command: 'V67_STOP_PROGRAM_VIDEO', reset: Boolean(reset) }); } catch (_) {}
+  }
+
+  // Stop the previous Live video before a different scene is sent Live.
+  const fireLiveBeforeV67 = window.fireLive;
+  if (typeof fireLiveBeforeV67 === 'function') {
+    window.fireLive = async function(...args) {
+      const oldLive = (typeof liveState !== 'undefined' && liveState) ? liveState : null;
+      const nextLive = (typeof staged !== 'undefined' && staged) ? staged : null;
+      if (oldLive?.type === 'video' && !sameProgramVideoV67(oldLive, nextLive)) {
+        stopOutgoingProgramVideoV67(false);
+      }
+      return await fireLiveBeforeV67.apply(this, args);
+    };
+  }
+
+  // Display/output windows receive the explicit stop command too, so no hidden
+  // outgoing video can keep playing audio under the next scene.
+  try {
+    channel.addEventListener('message', event => {
+      const message = event?.data;
+      if (!message || message.command !== 'V67_STOP_PROGRAM_VIDEO') return;
+      document.querySelectorAll('#audience-view video, .audience-media-layer video, #live-viewport video').forEach(video => {
+        stopVideoNodeV67(video, Boolean(message.reset));
+      });
+    });
+  } catch (_) {}
+
+  function isTypingTargetV67(target) {
+    if (!target) return false;
+    if (target.isContentEditable) return true;
+    const tag = String(target.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON';
+  }
+
+  // PDF operator controls:
+  // Left / Up   = previous slide
+  // Right / Down = next slide
+  // Enter       = send the selected PDF slide Live
+  window.addEventListener('keydown', event => {
+    if (isTypingTargetV67(event.target)) return;
+    const current = (typeof staged !== 'undefined' && staged) ? staged : null;
+    if (!current || current.type !== 'pdf') return;
+
+    const key = event.key;
+    if (key === 'ArrowLeft' || key === 'ArrowUp' || key === 'ArrowRight' || key === 'ArrowDown') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      const delta = (key === 'ArrowLeft' || key === 'ArrowUp') ? -1 : 1;
+      if (typeof setPdfPage === 'function') setPdfPage((Number(current.page) || 1) + delta);
+      return;
+    }
+
+    if (key === 'Enter') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (typeof window.fireLive === 'function') window.fireLive();
+    }
+  }, true);
 })();
