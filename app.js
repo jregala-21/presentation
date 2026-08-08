@@ -12695,3 +12695,63 @@ downloadCloudFileToRoot = async function(fileId) {
     if (audience) videoObserverV66.observe(audience, {childList:true,subtree:true});
   }, {once:true});
 })();
+
+/* V63: Go Live automatically reveals content when Background is active.
+   The new Preview is committed while the audience is still safely covered,
+   then the background fades off so no previous Live frame can flash. */
+(() => {
+  const previousFireLiveV63 = window.fireLive;
+  let goLiveRevealBusyV63 = false;
+
+  const waitV63 = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+  async function turnBackgroundOffAfterCommitV63() {
+    try {
+      if (typeof isFTGActive === 'undefined' || !isFTGActive) return;
+
+      // Give the new Live/output frame a moment to mount behind the cover.
+      await waitV63(90);
+
+      if (typeof toggleFadeToBackground === 'function') {
+        toggleFadeToBackground();
+        return;
+      }
+
+      // Fallback if the legacy toggle is unavailable for any reason.
+      isFTGActive = false;
+      const btn = document.getElementById('ftg-toggle-btn');
+      if (btn) {
+        btn.classList.remove('active');
+        btn.textContent = '🖼️ Background On';
+      }
+      try { if (typeof updateLiveMonitorOverlays === 'function') updateLiveMonitorOverlays(); } catch (_) {}
+      try { channel.postMessage({ command: 'TOGGLE_FTG_STATE', active: false }); } catch (_) {}
+    } catch (error) {
+      console.warn('V63: Unable to automatically turn Background off after Go Live:', error);
+    }
+  }
+
+  window.fireLive = async function(...args) {
+    if (goLiveRevealBusyV63) return;
+    goLiveRevealBusyV63 = true;
+
+    const backgroundWasActive = (() => {
+      try { return typeof isFTGActive !== 'undefined' && Boolean(isFTGActive); }
+      catch (_) { return false; }
+    })();
+
+    try {
+      // Commit Preview -> Live first while the audience remains covered.
+      const result = typeof previousFireLiveV63 === 'function'
+        ? await previousFireLiveV63.apply(this, args)
+        : undefined;
+
+      // If Background was ON when Go Live was clicked, reveal the newly
+      // committed Live output automatically. Existing fade styling is retained.
+      if (backgroundWasActive) await turnBackgroundOffAfterCommitV63();
+      return result;
+    } finally {
+      goLiveRevealBusyV63 = false;
+    }
+  };
+})();
