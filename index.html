@@ -745,8 +745,8 @@
       color: #334155;
     }
     .ftg-btn.active {
-      background-color: var(--accent-purple) !important;
-      border-color: var(--accent-purple);
+      background-color: var(--accent-red) !important;
+      border-color: var(--accent-red);
       color: white;
     }
 
@@ -1121,8 +1121,8 @@
       background: var(--accent-red) !important;
     }
     #ftg-toggle-btn.active {
-      background: var(--accent-purple) !important;
-      border-color: var(--accent-purple);
+      background: var(--accent-red) !important;
+      border-color: var(--accent-red);
     }
     .bible-import-summary {
       color: var(--text-muted);
@@ -1570,8 +1570,34 @@ body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-
 #onlyoffice-audience-background-cover img{width:100%;height:100%;object-fit:cover;display:block;background:#000}
 #pptx-editor-modal:fullscreen #onlyoffice-audience-background-cover{position:absolute;inset:0}
 </style>
+
+<style id="main-ui-quality-styles">
+  .main-file-loading-overlay{position:fixed;inset:0;z-index:2147482500;display:grid;place-items:center;background:rgba(5,8,14,.24);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .16s ease;}
+  .main-file-loading-overlay.show{opacity:1;pointer-events:auto;}
+  .main-file-loading-card{min-width:250px;max-width:min(90vw,420px);padding:18px 22px;border-radius:16px;background:rgba(16,21,31,.94);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 55px rgba(0,0,0,.45);display:flex;align-items:center;gap:14px;color:#fff;}
+  .main-file-loading-spinner{width:30px;height:30px;border:3px solid rgba(255,255,255,.2);border-top-color:#5aa7ff;border-radius:50%;animation:mainFileSpin .72s linear infinite;flex:0 0 auto;}
+  .main-file-loading-title{font-size:14px;font-weight:900;letter-spacing:.01em;}
+  .main-file-loading-detail{margin-top:3px;font-size:12px;color:#aeb9cb;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:310px;}
+  @keyframes mainFileSpin{to{transform:rotate(360deg)}}
+  .preview-flicker-shield{position:fixed;z-index:2147481000;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;pointer-events:none;opacity:1;transition:opacity .18s ease;}
+  .preview-flicker-shield.fade-out{opacity:0;}
+  .preview-flicker-shield img{width:100%;height:100%;object-fit:contain;background:#000;display:block;}
+  #preview-viewport canvas,#preview-viewport img,#preview-viewport video{backface-visibility:hidden;transform:translateZ(0);}
+  .root-file-filter-label{font-size:12px;font-weight:800;color:var(--text-muted);}
+  .root-file-type-filter{width:auto;min-width:150px;margin:0;height:34px;padding:0 34px 0 10px;}
+  .root-file-category{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:10px;margin:12px 0 2px;padding:9px 12px;border-radius:10px;background:rgba(255,255,255,.045);border:1px solid var(--border);}
+  .root-file-category strong{font-size:13px;letter-spacing:.02em;}
+  .root-file-category span{font-size:11px;color:var(--text-muted);font-weight:800;}
+</style>
 </head>
 <body>
+  <div id="main-file-loading-overlay" class="main-file-loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+    <div class="main-file-loading-card">
+      <div class="main-file-loading-spinner"></div>
+      <div style="min-width:0"><div id="main-file-loading-title" class="main-file-loading-title">Loading file…</div><div id="main-file-loading-detail" class="main-file-loading-detail">Preparing preview</div></div>
+    </div>
+  </div>
+
   <div id="intro-loading-screen" class="intro-loading-screen" aria-live="polite">
     <div class="intro-logo-ring"></div>
     <div class="intro-title">WELCOME TO JIL TAGUIG PRESENTER</div>
@@ -1840,10 +1866,18 @@ body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-
         <button style="background:#444;" onclick="closeRootFilesModal()">Close</button>
       </div>
       <div class="drive-view-toolbar">
-        <label class="drive-filter-switch"><input id="root-pdf-only-filter" type="checkbox" onchange="renderRootFilesList()"><span></span><b>PDF files only</b></label>
+        <label class="root-file-filter-label" for="root-file-type-filter">Type</label>
+        <select id="root-file-type-filter" class="root-file-type-filter" onchange="renderRootFilesList()">
+          <option value="all">All files</option>
+          <option value="image">Images</option>
+          <option value="video">Videos</option>
+          <option value="pdf">PDF</option>
+          <option value="pptx">PowerPoint</option>
+          <option value="audio">Audio</option>
+        </select>
         <button type="button" class="mini-btn" onclick="renderRootFilesList(true)">↻ Refresh</button>
       </div>
-      <div class="modal-body" style="margin:8px 0 0;">Files are read directly from the selected root folder. Add to Scene does not upload or copy the file.</div>
+      <div class="modal-body" style="margin:8px 0 0;">Files are read directly from the selected root folder and organized by type. Use the Type filter to quickly show images, videos, PDFs, PowerPoint files, or audio. Add to Scene does not upload or copy the file.</div>
       <div id="root-files-list" class="drive-pdf-list"></div>
     </div>
   </div>
@@ -1916,14 +1950,14 @@ body.onlyoffice-audience-monitor-mode #pptx-editor-modal:fullscreen #onlyoffice-
         <button type="button" style="background:#444;" onclick="closePresenterInstructions()">Close</button>
       </div>
       <div class="presenter-help-content">
-        <section><h4>1. Choose the root folder</h4><p>Select the local media folder first. Downloaded cloud files and exported PDFs are saved there.</p></section>
-        <section><h4>2. Add media</h4><p>Use the single Choose Files control in Media Assets for images, videos, PDFs, audio, and PPTX. A PPTX automatically opens the PowerPoint preparation and editing workflow.</p></section>
-        <section><h4>3. Reuse cloud PPTX files</h4><p>Open File Transfer → View cloud files, then enable the PPTX filter. Choose Add to Scene to reuse a PowerPoint already stored in Google Drive. It does not upload the file again.</p></section>
-        <section><h4>4. Preview and Go Live</h4><p>Click an asset or presentation slide to queue it in Preview. Confirm it, then click Go Live to send it to Live View and the Display Screen.</p></section>
-        <section><h4>5. Navigate presentations</h4><p>Use the previous and next controls in Live View to change the live slide immediately. Clicking thumbnails changes Preview only until Go Live is pressed.</p></section>
-        <section><h4>6. Edit PowerPoint</h4><p>Select the pencil icon below Preview. Choose a text box and change the font size. Changes save automatically. Use the PDF icon only when a PDF copy is needed.</p></section>
-        <section><h4>7. Display screen</h4><p>Detect the intended monitor, open the Display Screen, and use Background or Fade to Black only when needed.</p></section>
-        <section><h4>8. File Transfer</h4><p>View cloud files shows cloud storage and includes a PPTX-only filter. View Root Files shows local media. Add to Scene reuses an existing file whenever possible.</p></section>
+        <section><h4>1. Connect the root folder</h4><p>Choose the local presentation folder first. Root Files is organized by Images, Videos, PDF, PowerPoint, and Audio so media is easier to find. Downloaded cloud files are also saved into this root folder.</p></section>
+        <section><h4>2. Add media</h4><p>Use Media Assets → Choose Files for images, videos, PDFs, audio, and PPTX. A loading indicator appears while the selected file is prepared. PPTX opens the separate ONLYOFFICE workflow; the normal website handles the other media types.</p></section>
+        <section><h4>3. Preview safely</h4><p>Click an item or presentation page to load it into Preview. PDF changes are buffered to reduce visible flicker while a page is rendering. Preview is separate from the audience until Go Live is pressed.</p></section>
+        <section><h4>4. Go Live</h4><p>When Preview is ready, click Go Live. Live View and the Display Screen receive the selected media. For video, only one output is allowed to produce program audio so overlapping sound is avoided.</p></section>
+        <section><h4>5. Background and blackout</h4><p>Choose the audience background from the header. When the button reads Background Off and is red, the background is currently covering the audience. Click it to reveal the live media. Fade To Black remains available for an immediate black cover.</p></section>
+        <section><h4>6. Display screen</h4><p>Use Detect Monitor to choose the audience display, then open the Display Screen. Keep the operator website on the primary monitor and the audience output on the secondary monitor.</p></section>
+        <section><h4>7. PowerPoint / PPTX</h4><p>PPTX files use the ONLYOFFICE presentation workflow and its Extender controls. The main website presentation behavior for PDF, video, images, audio, Bible, and other media remains independent from the PPTX presenter workflow.</p></section>
+        <section><h4>8. File Transfer and Root Files</h4><p>View cloud files is for cloud storage. View Root Files is for the selected local folder and can be filtered by media type. Add to Scene reuses the existing local file whenever possible instead of creating another copy.</p></section>
       </div>
     </div>
   </div>
