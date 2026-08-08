@@ -13027,3 +13027,191 @@ downloadCloudFileToRoot = async function(fileId) {
     }
   };
 })();
+
+/* V69 HARD PROGRAM RESET
+   Go Live is now a terminal Preview -> Program commit. It does not reuse any
+   previous Live DOM/media node. The outgoing program is destroyed first,
+   then the current Preview payload is rendered from a fresh Live state. */
+(() => {
+  if (window.__v69HardProgramResetInstalled) return;
+  window.__v69HardProgramResetInstalled = true;
+
+  let busyV69 = false;
+  let commitV69 = 0;
+
+  const cloneV69 = value => {
+    try { return typeof clonePresenterPayload === 'function' ? clonePresenterPayload(value) : structuredClone(value); }
+    catch (_) { try { return JSON.parse(JSON.stringify(value || {})); } catch (_) { return value || {}; } }
+  };
+
+  function currentPreviewV69() {
+    let payload = null;
+    try { payload = staged || null; } catch (_) { payload = window.staged || null; }
+    if (!payload) return null;
+    payload = cloneV69(payload);
+
+    // Reconcile with the active scene so switching scenes cannot recommit the
+    // last Live video because of a stale window.staged mirror.
+    try {
+      const scene = typeof getActiveScene === 'function'
+        ? getActiveScene()
+        : (Array.isArray(scenes) ? scenes.find(s => s?.id === activeSceneId) : null);
+      if (scene?.items?.length) {
+        let index = Number.isInteger(payload.sceneItemIndex) ? payload.sceneItemIndex : -1;
+        if (index < 0 || !scene.items[index] || (payload.itemId && scene.items[index]?.id !== payload.itemId)) {
+          if (payload.itemId) index = scene.items.findIndex(item => item?.id === payload.itemId);
+        }
+        if (index < 0 && scene.items.length === 1) index = 0;
+        if (index >= 0 && scene.items[index]) {
+          payload = Object.assign(cloneV69(scene.items[index]), payload);
+          payload.sceneId = scene.id;
+          payload.sceneItemIndex = index;
+          payload.itemId = scene.items[index]?.id;
+        }
+      }
+    } catch (_) {}
+
+    return payload;
+  }
+
+  function killVideoV69(video) {
+    if (!video) return;
+    try { video.pause(); } catch (_) {}
+    try { video.muted = true; video.volume = 0; } catch (_) {}
+    try { video.removeAttribute('src'); video.load(); } catch (_) {}
+    try { video.remove(); } catch (_) {}
+  }
+
+  function hardClearNodeV69(root, preserveBackground = false) {
+    if (!root) return;
+    root.querySelectorAll('video,audio').forEach(killVideoV69);
+    [...root.children].forEach(node => {
+      if (preserveBackground && node.id === 'audience-bg-layer') return;
+      if (node.classList?.contains('viewport-label') || node.classList?.contains('live-monitor-overlay')) return;
+      try { node.remove(); } catch (_) {}
+    });
+  }
+
+  function hardResetLocalV69() {
+    // Destroy every known program media instance, not merely pause it.
+    document.querySelectorAll('#live-viewport video,#operator-view video,#operator-live-video').forEach(killVideoV69);
+    hardClearNodeV69(document.getElementById('live-viewport'), false);
+    try {
+      liveState = { type: 'none', value: '', page: 1, videoPlaying: false, videoTime: 0 };
+      lastIncoming = cloneV69(liveState);
+    } catch (_) {}
+  }
+
+  function broadcastV69(message) {
+    try { channel.postMessage(message); } catch (_) {}
+    try { if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*'); } catch (_) {}
+  }
+
+  function hardResetAudienceV69() {
+    broadcastV69({ command: 'V69_HARD_RESET_PROGRAM', commitId: ++commitV69 });
+    // Keep compatibility with earlier audience handlers.
+    broadcastV69({ command: 'V61_CLEAR_LIVE_OUTPUT', commitId: commitV69 });
+    broadcastV69({ command: 'V67_STOP_PROGRAM_VIDEO', reset: true });
+  }
+
+  function receiveResetV69(message) {
+    if (!message || message.command !== 'V69_HARD_RESET_PROGRAM') return;
+    if (!document.body.classList.contains('live-window-mode')) return;
+    document.querySelectorAll('#audience-view video,#audience-view audio,.audience-media-layer video,.audience-media-layer audio').forEach(killVideoV69);
+    hardClearNodeV69(document.getElementById('audience-view'), true);
+  }
+  try { channel.addEventListener('message', event => receiveResetV69(event.data)); } catch (_) {}
+  window.addEventListener('message', event => receiveResetV69(event.data));
+
+  const nextPaintV69 = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+
+  async function revealBackgroundV69(backgroundWasActive) {
+    if (!backgroundWasActive) return;
+    await new Promise(resolve => setTimeout(resolve, 90));
+    try {
+      if (typeof isFTGActive !== 'undefined' && isFTGActive && typeof toggleFadeToBackground === 'function') {
+        toggleFadeToBackground();
+      }
+    } catch (_) {}
+  }
+
+  window.fireLive = async function() {
+    if (busyV69) return;
+    busyV69 = true;
+    const backgroundWasActive = (() => {
+      try { return typeof isFTGActive !== 'undefined' && Boolean(isFTGActive); } catch (_) { return false; }
+    })();
+
+    try {
+      const payload = currentPreviewV69();
+      if (!payload || !payload.type || payload.type === 'none') return;
+
+      // Snapshot video state only when the NEW preview itself is a video.
+      if (payload.type === 'video') {
+        const previewVideo = [...document.querySelectorAll('#preview-viewport video')].reverse().find(v => {
+          const r = v.getBoundingClientRect();
+          return r.width > 8 && r.height > 8;
+        });
+        if (previewVideo) {
+          payload.videoTime = Number(previewVideo.currentTime || 0);
+          payload.videoPlaying = !previewVideo.paused;
+        }
+      }
+
+      // FULL RESET: program is intentionally blank between old and new scenes.
+      hardResetLocalV69();
+      hardResetAudienceV69();
+      await nextPaintV69();
+
+      // Install only the new Preview payload as Program state.
+      try {
+        liveState = cloneV69(payload);
+        lastIncoming = cloneV69(payload);
+        window.staged = cloneV69(payload);
+      } catch (_) {}
+
+      // Rebuild Live View from scratch with the normal renderer. No old DOM survives.
+      if (typeof renderLiveView === 'function') await renderLiveView();
+      else if (typeof window.renderLiveView === 'function') await window.renderLiveView();
+
+      const transitionType = document.getElementById('transition-type-select')?.value || 'cut';
+      broadcastV69({
+        command: 'TRIGGER_LIVE_FADE',
+        payload: cloneV69(payload),
+        transitionType,
+        commitId: commitV69
+      });
+
+      // Explicit current-output sync for display generations that listen to this path.
+      broadcastV69({
+        command: 'V69_COMMIT_PROGRAM',
+        payload: cloneV69(payload),
+        transitionType,
+        commitId: commitV69
+      });
+
+      await revealBackgroundV69(backgroundWasActive);
+    } catch (error) {
+      console.error('V69 hard Go Live reset failed:', error);
+    } finally {
+      busyV69 = false;
+    }
+  };
+
+  // New display-window receiver: always hard reset before mounting the new program.
+  async function receiveCommitV69(message) {
+    if (!message || message.command !== 'V69_COMMIT_PROGRAM' || !document.body.classList.contains('live-window-mode')) return;
+    receiveResetV69({ command: 'V69_HARD_RESET_PROGRAM' });
+    try {
+      lastIncoming = cloneV69(message.payload);
+      liveState = cloneV69(message.payload);
+    } catch (_) {}
+    try {
+      if (typeof renderAudience === 'function') await renderAudience(cloneV69(message.payload));
+    } catch (error) {
+      console.warn('V69 audience commit fallback failed:', error);
+    }
+  }
+  try { channel.addEventListener('message', event => receiveCommitV69(event.data)); } catch (_) {}
+  window.addEventListener('message', event => receiveCommitV69(event.data));
+})();
