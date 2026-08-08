@@ -2137,8 +2137,10 @@
           video.ontimeupdate = () => {
             const lbl = document.getElementById('vid-runtime-lbl');
             if (lbl) lbl.textContent = new Date(video.currentTime * 1000).toISOString().substr(14, 5);
+            // Keep Preview time locally, but do NOT continuously seek the Display Screen.
+            // The audience video is the program/audio master and runs on its own clock.
+            // Play, pause and explicit reset actions still synchronize below.
             staged.videoTime = video.currentTime;
-            syncLiveVideoFromPreview(video.currentTime, staged.videoPlaying);
           };
           video.onended = () => {
             staged.videoPlaying = false;
@@ -2667,7 +2669,7 @@
         if (document.body.classList.contains('live-window-mode')) {
           const liveVid = document.getElementById('audience-live-video');
           if (liveVid) {
-            if (Math.abs(liveVid.currentTime - msg.time) > 0.5) liveVid.currentTime = msg.time;
+            if (Math.abs(liveVid.currentTime - msg.time) > 5) liveVid.currentTime = msg.time;
             if (msg.playing && liveVid.paused) liveVid.play();
             if (!msg.playing && !liveVid.paused) liveVid.pause();
           }
@@ -7388,18 +7390,40 @@ downloadCloudFileToRoot = async function(fileId) {
   // Keep the display video synchronized with Preview play/pause and seeking.
   const previousSyncLiveVideoV26 = window.syncLiveVideoFromPreview;
   window.syncLiveVideoFromPreview = function(time, playing) {
-    if (typeof previousSyncLiveVideoV26 === 'function') previousSyncLiveVideoV26(time, playing);
+    // Update operator-side state/UI without letting the legacy function send a second
+    // audience sync packet. The Display Screen is the sole audible program player.
+    if (isStagedLiveVideo()) {
+      liveState.videoTime = Number(time || 0);
+      liveState.videoPlaying = Boolean(playing);
+      const monitorVideo = document.getElementById('operator-live-video');
+      if (monitorVideo) {
+        monitorVideo.muted = true;
+        monitorVideo.volume = 0;
+        if (Math.abs((monitorVideo.currentTime || 0) - Number(time || 0)) > 1.5) {
+          try { monitorVideo.currentTime = Number(time || 0); } catch (_) {}
+        }
+        if (playing && monitorVideo.paused) monitorVideo.play().catch(() => {});
+        if (!playing && !monitorVideo.paused) monitorVideo.pause();
+      }
+    } else if (typeof previousSyncLiveVideoV26 === 'function') {
+      previousSyncLiveVideoV26(time, playing);
+    }
+
     const message = {
       command: 'SYNC_VIDEO_STATE',
       time: Number(time || 0),
       playing: Boolean(playing),
       muted: false,
-      volume: 1
+      volume: 1,
+      sentAt: Date.now()
     };
-    channel.postMessage(message);
     try {
-      if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*');
-    } catch (_) {}
+      channel.postMessage(message);
+    } catch (_) {
+      try {
+        if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*');
+      } catch (_) {}
+    }
   };
 
   async function applyVideoSync(message) {
@@ -7408,7 +7432,9 @@ downloadCloudFileToRoot = async function(fileId) {
     const video = document.getElementById('audience-live-video');
     if (!video) return;
     const time = Number(message.time || 0);
-    if (Number.isFinite(time) && Math.abs((video.currentTime || 0) - time) > 0.35) {
+    // Never chase small clock differences: repeated currentTime writes cause audible
+    // stutter/lag. Only correct a clearly intentional jump (reset/seek) or large drift.
+    if (Number.isFinite(time) && Math.abs((video.currentTime || 0) - time) > 5) {
       try { video.currentTime = time; } catch (_) {}
     }
     video.muted = false;
@@ -13368,4 +13394,624 @@ downloadCloudFileToRoot = async function(fileId) {
   try { channel.addEventListener('message', queueAudioGuardV70); } catch (_) {}
   window.addEventListener('message', queueAudioGuardV70);
   queueAudioGuardV70();
+})();
+
+/* V71: smoother PDF page-to-page commits + video A/V stability.
+   Keeps the proven V69 hard-reset Go Live path for real scene/media changes.
+   Only same-PDF page changes use this lightweight buffered transition. */
+(() => {
+  if (window.__v71SmoothPdfVideoInstalled) return;
+  window.__v71SmoothPdfVideoInstalled = true;
+
+  const PDF_FRAME_COMMAND_V71 = 'JIL_V71_SMOOTH_PDF_FRAME';
+  const previousFireLiveV71 = window.fireLive;
+
+  const cloneV71 = value => {
+    try { return typeof clonePresenterPayload === 'function' ? clonePresenterPayload(value) : structuredClone(value); }
+    catch (_) { try { return JSON.parse(JSON.stringify(value || {})); } catch (_) { return value || {}; } }
+  };
+
+  function samePdfV71(a, b) {
+    if (!a || !b || a.type !== 'pdf' || b.type !== 'pdf') return false;
+    if (a.itemId && b.itemId) return a.itemId === b.itemId;
+    if (a.rootRelativePath && b.rootRelativePath) return a.rootRelativePath === b.rootRelativePath;
+    if (a.name && b.name) return a.name === b.name;
+    return Boolean(a.value && b.value && a.value === b.value);
+  }
+
+  function removePdfArrowsV71(root) {
+    if (!root) return;
+    root.querySelectorAll('.pdf-live-nav,.v17-pdf-nav,.v19-pdf-nav,.v23-live-pdf-nav,.pdf-toolbar').forEach(node => node.remove());
+    root.querySelectorAll('button').forEach(button => {
+      const aria = String(button.getAttribute('aria-label') || '').toLowerCase();
+      const title = String(button.getAttribute('title') || '').toLowerCase();
+      const cls = String(button.className || '').toLowerCase();
+      const text = String(button.textContent || '').trim();
+      if (aria.includes('previous') || aria.includes('next') ||
+          title.includes('previous') || title.includes('next') ||
+          cls.includes('pdf-live-nav') || cls.includes('pdf-prev') || cls.includes('pdf-next') ||
+          text === '‹' || text === '›' || text === '←' || text === '→') {
+        button.remove();
+      }
+    });
+  }
+
+  const liveRootV71 = document.getElementById('live-viewport');
+  const audienceRootV71 = document.getElementById('audience-view');
+  if (liveRootV71) {
+    new MutationObserver(() => removePdfArrowsV71(liveRootV71)).observe(liveRootV71, { childList:true, subtree:true });
+    removePdfArrowsV71(liveRootV71);
+  }
+  if (audienceRootV71) {
+    new MutationObserver(() => removePdfArrowsV71(audienceRootV71)).observe(audienceRootV71, { childList:true, subtree:true });
+    removePdfArrowsV71(audienceRootV71);
+  }
+
+  async function renderPdfFrameV71(payload) {
+    if (!payload || payload.type !== 'pdf') return '';
+    const loadingTask = pdfjsLib.getDocument(getPdfJsSource(payload));
+    const doc = await loadingTask.promise;
+    const pageNum = Math.max(1, Math.min(Number(payload.page || 1), doc.numPages));
+    const page = await doc.getPage(pageNum);
+    const baseViewport = page.getViewport({ scale: 1 });
+    const maxWidth = 1920;
+    const maxHeight = 1080;
+    const scale = Math.max(1, Math.min(2, maxWidth / baseViewport.width, maxHeight / baseViewport.height));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(viewport.width);
+    canvas.height = Math.round(viewport.height);
+    const ctx = canvas.getContext('2d', { alpha:false });
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext:ctx, viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.94);
+  }
+
+  async function crossfadeFrameV71(root, src, isAudience) {
+    if (!root || !src) return;
+    const bgLayer = isAudience ? document.getElementById('audience-bg-layer') : null;
+    const overlays = !isAudience ? Array.from(root.querySelectorAll('.live-monitor-overlay')) : [];
+
+    const next = document.createElement('div');
+    next.className = 'v71-smooth-pdf-frame';
+    next.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#000;opacity:0;transition:opacity 240ms ease;z-index:3;overflow:hidden;';
+    const img = document.createElement('img');
+    img.src = src;
+    img.alt = 'Presentation slide';
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:#000;';
+    next.appendChild(img);
+    root.appendChild(next);
+
+    try {
+      if (!img.complete) await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; });
+    } catch (_) {}
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    next.style.opacity = '1';
+    await new Promise(resolve => setTimeout(resolve, 260));
+
+    Array.from(root.children).forEach(child => {
+      if (child === next || child === bgLayer || overlays.includes(child) || child.classList?.contains('viewport-label')) return;
+      child.remove();
+    });
+    next.style.position = 'absolute';
+    next.style.zIndex = '1';
+    removePdfArrowsV71(root);
+    try { if (!isAudience && typeof updateLiveMonitorOverlays === 'function') updateLiveMonitorOverlays(); } catch (_) {}
+  }
+
+  async function smoothCommitSamePdfV71(payload) {
+    const src = await renderPdfFrameV71(payload);
+    if (!src) return false;
+
+    try {
+      liveState = cloneV71(payload);
+      lastIncoming = cloneV71(payload);
+    } catch (_) {}
+
+    await crossfadeFrameV71(document.getElementById('live-viewport'), src, false);
+
+    const message = {
+      command: PDF_FRAME_COMMAND_V71,
+      payload: cloneV71(payload),
+      src,
+      transitionType: 'fade'
+    };
+    try { channel.postMessage(message); } catch (_) {}
+    try { if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*'); } catch (_) {}
+    return true;
+  }
+
+  async function receivePdfFrameV71(message) {
+    if (!message || message.command !== PDF_FRAME_COMMAND_V71 || !message.src) return;
+    if (!document.body.classList.contains('live-window-mode')) return;
+    try {
+      lastIncoming = cloneV71(message.payload);
+      liveState = cloneV71(message.payload);
+    } catch (_) {}
+    await crossfadeFrameV71(document.getElementById('audience-view'), message.src, true);
+  }
+  try { channel.addEventListener('message', event => receivePdfFrameV71(event.data)); } catch (_) {}
+  window.addEventListener('message', event => receivePdfFrameV71(event.data));
+
+  // Same PDF, different page: do NOT blank/reset Program. Render the new page first,
+  // then crossfade it over the old page. All other Go Live operations still use V69.
+  window.fireLive = async function(...args) {
+    let queued = null;
+    let current = null;
+    try { queued = cloneV71(staged || window.staged); } catch (_) { queued = cloneV71(window.staged); }
+    try { current = cloneV71(liveState); } catch (_) { current = null; }
+
+    if (samePdfV71(queued, current) && Number(queued.page || 1) !== Number(current.page || 1)) {
+      try {
+        const ok = await smoothCommitSamePdfV71(queued);
+        if (ok) return;
+      } catch (error) {
+        console.warn('V71 smooth PDF commit failed; using normal Go Live.', error);
+      }
+    }
+    return typeof previousFireLiveV71 === 'function' ? previousFireLiveV71.apply(this, args) : undefined;
+  };
+
+  // Prevent the Preview timeupdate loop from repeatedly seeking the independent
+  // Display Screen video. The display video now free-runs after play starts; we send
+  // sync only for play/pause changes or a real seek/reset (>1.5 s jump).
+  let lastSyncPlayingV71 = null;
+  let lastSyncTimeV71 = 0;
+  let lastSyncSentAtV71 = 0;
+  const rawPostV71 = channel.postMessage.bind(channel);
+  channel.postMessage = function(message) {
+    if (message && message.command === 'SYNC_VIDEO_STATE') {
+      const now = performance.now();
+      const time = Number(message.time || 0);
+      const playing = Boolean(message.playing);
+      const stateChanged = lastSyncPlayingV71 === null || playing !== lastSyncPlayingV71;
+      const seeked = Math.abs(time - lastSyncTimeV71) > 1.5;
+      const stale = now - lastSyncSentAtV71 > 5000;
+      if (!stateChanged && !seeked && !stale) return;
+      lastSyncPlayingV71 = playing;
+      lastSyncTimeV71 = time;
+      lastSyncSentAtV71 = now;
+    }
+    return rawPostV71(message);
+  };
+})();
+
+/* V72: direct PDF page commit for truly smooth audience changes.
+   - Same-PDF page changes never invoke the V69 hard reset.
+   - A fully rendered frame is sent to the Display Screen before any DOM swap.
+   - Duplicate BroadcastChannel/window deliveries are ignored.
+   - Double-click continues to use window.fireLive, but now commits the selected page
+     directly instead of waiting on any arrow-key navigation state. */
+(() => {
+  if (window.__v72DirectPdfCommitInstalled) return;
+  window.__v72DirectPdfCommitInstalled = true;
+
+  const COMMAND = 'JIL_V72_DIRECT_PDF_FRAME';
+  const previousFireLiveV72 = window.fireLive;
+  let commitSerialV72 = 0;
+  let busyV72 = false;
+  let lastAudienceCommitV72 = '';
+
+  const cloneV72 = value => {
+    try { return typeof clonePresenterPayload === 'function' ? clonePresenterPayload(value) : structuredClone(value); }
+    catch (_) { try { return JSON.parse(JSON.stringify(value || {})); } catch (_) { return value || {}; } }
+  };
+
+  function currentQueuedV72() {
+    try { return cloneV72(staged || window.staged || null); }
+    catch (_) { return cloneV72(window.staged || null); }
+  }
+
+  function currentLiveV72() {
+    try { return cloneV72(liveState || null); }
+    catch (_) { return null; }
+  }
+
+  function samePdfV72(a, b) {
+    if (!a || !b || a.type !== 'pdf' || b.type !== 'pdf') return false;
+    if (a.itemId && b.itemId) return a.itemId === b.itemId;
+    if (a.rootRelativePath && b.rootRelativePath) return a.rootRelativePath === b.rootRelativePath;
+    if (a.googleDrive?.fileId && b.googleDrive?.fileId) return a.googleDrive.fileId === b.googleDrive.fileId;
+    if (a.name && b.name) return a.name === b.name;
+    return Boolean(a.value && b.value && a.value === b.value);
+  }
+
+  async function renderFrameV72(payload) {
+    const loadingTask = pdfjsLib.getDocument(getPdfJsSource(payload));
+    const doc = await loadingTask.promise;
+    const pageNum = Math.max(1, Math.min(Number(payload.page || 1), doc.numPages));
+    const page = await doc.getPage(pageNum);
+    const base = page.getViewport({ scale: 1 });
+    const scale = Math.max(1, Math.min(2, 1920 / base.width, 1080 / base.height));
+    const viewport = page.getViewport({ scale });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(viewport.width);
+    canvas.height = Math.ceil(viewport.height);
+    const ctx = canvas.getContext('2d', { alpha: false });
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    return canvas.toDataURL('image/jpeg', 0.96);
+  }
+
+  async function loadImageV72(src) {
+    const img = new Image();
+    img.src = src;
+    if (img.decode) {
+      try { await img.decode(); return img; } catch (_) {}
+    }
+    if (!img.complete) {
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+    }
+    return img;
+  }
+
+  function protectedChildrenV72(root, isAudience) {
+    const keep = new Set();
+    if (isAudience) {
+      const bg = root?.querySelector?.('#audience-bg-layer');
+      if (bg) keep.add(bg);
+    } else {
+      root?.querySelectorAll?.('.live-monitor-overlay,.viewport-label').forEach(node => keep.add(node));
+    }
+    return keep;
+  }
+
+  async function crossfadeFrameV72(root, src, isAudience) {
+    if (!root || !src) return;
+    const img = await loadImageV72(src);
+    const keep = protectedChildrenV72(root, isAudience);
+    const old = Array.from(root.children).filter(node => !keep.has(node));
+
+    const next = document.createElement('div');
+    next.className = 'v72-direct-pdf-frame';
+    next.style.cssText = 'position:absolute;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;overflow:hidden;opacity:0;transition:opacity 260ms ease-in-out;background:transparent;pointer-events:none;';
+    img.alt = 'Presentation slide';
+    img.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;background:#000;';
+    next.appendChild(img);
+    root.appendChild(next);
+
+    // The image is fully decoded before it is mounted. Keep the old frame visible
+    // until the new frame has completed two paints, preventing a black inter-frame.
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    next.style.opacity = '1';
+    old.forEach(node => {
+      node.style.transition = 'opacity 260ms ease-in-out';
+      node.style.opacity = '0';
+    });
+    await new Promise(resolve => setTimeout(resolve, 285));
+
+    old.forEach(node => {
+      try { node.remove(); } catch (_) {}
+    });
+    next.style.transition = '';
+    next.style.opacity = '1';
+    next.style.zIndex = '1';
+
+    // Never allow old PDF navigation controls to reappear over Program/Audience.
+    root.querySelectorAll('.pdf-live-nav,.v17-pdf-nav,.v19-pdf-nav,.v23-live-pdf-nav,.pdf-toolbar').forEach(node => node.remove());
+    if (!isAudience) {
+      try { if (typeof updateLiveMonitorOverlays === 'function') updateLiveMonitorOverlays(); } catch (_) {}
+    }
+  }
+
+  async function directPdfCommitV72(payload) {
+    if (!payload || payload.type !== 'pdf') return false;
+    if (busyV72) return false;
+    busyV72 = true;
+    try {
+      const exact = cloneV72(payload);
+      const src = await renderFrameV72(exact);
+      const commitId = `${Date.now()}-${++commitSerialV72}-${Number(exact.page || 1)}`;
+
+      // Update Program state without clearing any currently visible frame.
+      try {
+        liveState = cloneV72(exact);
+        lastIncoming = cloneV72(exact);
+        window.staged = cloneV72(exact);
+      } catch (_) {}
+
+      await crossfadeFrameV72(document.getElementById('live-viewport'), src, false);
+
+      // Broadcast one pre-rendered frame. Do not also send the legacy V69/V71 commands;
+      // those are what can blank the secondary screen between PDF pages.
+      const message = { command: COMMAND, payload: cloneV72(exact), src, commitId };
+      try { channel.postMessage(message); } catch (_) {}
+      try {
+        if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*');
+      } catch (_) {}
+      return true;
+    } finally {
+      busyV72 = false;
+    }
+  }
+
+  async function receiveDirectPdfV72(message) {
+    if (!message || message.command !== COMMAND || !message.src) return;
+    if (!document.body.classList.contains('live-window-mode')) return;
+    const key = String(message.commitId || `${message.payload?.itemId || message.payload?.name || 'pdf'}:${message.payload?.page || 1}`);
+    if (key === lastAudienceCommitV72) return;
+    lastAudienceCommitV72 = key;
+
+    try {
+      liveState = cloneV72(message.payload);
+      lastIncoming = cloneV72(message.payload);
+    } catch (_) {}
+    await crossfadeFrameV72(document.getElementById('audience-view'), message.src, true);
+  }
+
+  try { channel.addEventListener('message', event => receiveDirectPdfV72(event.data)); } catch (_) {}
+  window.addEventListener('message', event => receiveDirectPdfV72(event.data));
+
+  // Intercept only a page change inside the PDF that is already Program.
+  // Every real scene/media change continues through the proven V69 hard reset chain.
+  window.fireLive = async function(...args) {
+    const queued = currentQueuedV72();
+    const current = currentLiveV72();
+    if (samePdfV72(queued, current) && Number(queued?.page || 1) !== Number(current?.page || 1)) {
+      try {
+        if (await directPdfCommitV72(queued)) return;
+      } catch (error) {
+        console.warn('V72 direct PDF commit failed; falling back to normal Go Live.', error);
+      }
+    }
+    return typeof previousFireLiveV72 === 'function' ? previousFireLiveV72.apply(this, args) : undefined;
+  };
+
+  // Make a PDF slide double-click deterministic: explicitly select that exact page,
+  // wait for the queued state to settle, then commit it immediately to Program/Audience.
+  // This runs after the older handler, but duplicate commits are harmless/deduplicated.
+  document.addEventListener('dblclick', async event => {
+    const card = event.target?.closest?.('#slide-preview-grid .preview-slide-card[data-pdf-page]');
+    if (!card) return;
+    const page = Math.max(1, Number(card.dataset.pdfPage || 1));
+    try {
+      if (typeof window.setPdfPage === 'function') await window.setPdfPage(page);
+      else if (typeof setPdfPage === 'function') await setPdfPage(page);
+    } catch (_) {}
+
+    let queued = currentQueuedV72();
+    if (!queued || queued.type !== 'pdf') return;
+    queued.page = page;
+    try {
+      staged.page = page;
+      window.staged = cloneV72(queued);
+    } catch (_) {}
+
+    // If the same PDF is already live, bypass every legacy key/Go-Live queue and
+    // send the selected slide straight to both Live View and Display Screen.
+    const current = currentLiveV72();
+    if (samePdfV72(queued, current)) {
+      event.preventDefault();
+      try { await directPdfCommitV72(queued); } catch (error) { console.warn('V72 double-click commit failed:', error); }
+    }
+  }, false);
+})();
+
+/* V73: Display-only video audio + deterministic PDF direct-present navigation.
+   This patch does not replace V69/V72 scene transition logic. */
+(() => {
+  if (window.__v73DisplayAudioPdfInstalled) return;
+  window.__v73DisplayAudioPdfInstalled = true;
+
+  function isDisplayWindowV73() {
+    return document.body.classList.contains('live-window-mode');
+  }
+
+  function enforceDisplayOnlyAudioV73() {
+    const displayMode = isDisplayWindowV73();
+    document.querySelectorAll('video').forEach(video => {
+      const isAudienceVideo = displayMode && (
+        video.id === 'audience-live-video' ||
+        video.closest('#audience-view') ||
+        video.closest('.audience-media-layer')
+      );
+      try {
+        video.muted = !isAudienceVideo;
+        video.volume = isAudienceVideo ? 1 : 0;
+      } catch (_) {}
+    });
+    document.querySelectorAll('audio').forEach(audio => {
+      const isAudienceAudio = displayMode && (audio.closest('#audience-view') || audio.closest('.audience-media-layer'));
+      try {
+        audio.muted = !isAudienceAudio;
+        audio.volume = isAudienceAudio ? 1 : 0;
+      } catch (_) {}
+    });
+  }
+
+  // Keep the operator/main website silent at all times. The secondary Display Screen
+  // is the sole program-audio endpoint.
+  const audioObserverV73 = new MutationObserver(() => enforceDisplayOnlyAudioV73());
+  const startAudioGuardV73 = () => {
+    enforceDisplayOnlyAudioV73();
+    audioObserverV73.observe(document.documentElement, { childList: true, subtree: true });
+    setInterval(enforceDisplayOnlyAudioV73, 1200);
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startAudioGuardV73, { once: true });
+  else startAudioGuardV73();
+
+  function pdfCardV73(event) {
+    return event.target?.closest?.('#slide-preview-grid .preview-slide-card[data-pdf-page]') || null;
+  }
+
+  function getQueuedPdfV73() {
+    try { return staged && staged.type === 'pdf' ? staged : null; }
+    catch (_) { return window.staged && window.staged.type === 'pdf' ? window.staged : null; }
+  }
+
+  async function selectPdfPageV73(page) {
+    const setter = typeof window.setPdfPage === 'function'
+      ? window.setPdfPage
+      : (typeof setPdfPage === 'function' ? setPdfPage : null);
+    if (setter) await setter(page);
+    const queued = getQueuedPdfV73();
+    if (queued) {
+      queued.page = page;
+      try { staged.page = page; } catch (_) {}
+      try { window.staged.page = page; } catch (_) {}
+    }
+  }
+
+  // Capture phase makes double-click authoritative before any older thumbnail handler.
+  // The exact clicked page becomes the navigation anchor, then existing fireLive/V72
+  // sends it immediately to both Live View and Display Screen.
+  document.addEventListener('dblclick', async event => {
+    const card = pdfCardV73(event);
+    if (!card) return;
+    const page = Math.max(1, Number(card.dataset.pdfPage || 1));
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    try {
+      await selectPdfPageV73(page);
+      if (typeof window.fireLive === 'function') await window.fireLive();
+    } catch (error) {
+      console.warn('V73 PDF double-click present failed:', error);
+    }
+  }, true);
+
+  // Arrow navigation always starts from staged.page, which is updated by a double-click.
+  // This handler runs before legacy handlers so one keypress advances exactly one slide.
+  window.addEventListener('keydown', async event => {
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key)) return;
+    const target = event.target;
+    const tag = String(target?.tagName || '').toUpperCase();
+    if (target?.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
+    const queued = getQueuedPdfV73();
+    if (!queued) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const delta = (event.key === 'ArrowLeft' || event.key === 'ArrowUp') ? -1 : 1;
+    const next = Math.max(1, Number(queued.page || 1) + delta);
+    try { await selectPdfPageV73(next); } catch (error) { console.warn('V73 PDF key navigation failed:', error); }
+  }, true);
+})();
+
+
+/* V74: Scene-first video preview + single display video/audio master.
+   PDF presentation logic is intentionally untouched. */
+(() => {
+  if (window.__v74SceneVideoAudioInstalled) return;
+  window.__v74SceneVideoAudioInstalled = true;
+
+  const isDisplayV74 = () => document.body.classList.contains('live-window-mode');
+
+  function stopVideoV74(video, remove = false) {
+    if (!video) return;
+    try { video.pause(); } catch (_) {}
+    try { video.muted = true; video.volume = 0; } catch (_) {}
+    if (remove) {
+      try { video.removeAttribute('src'); video.load(); } catch (_) {}
+      try { video.remove(); } catch (_) {}
+    }
+  }
+
+  // Display Screen owns program audio. Keep exactly one audience video alive/audible.
+  // Old/duplicate audience videos are fully destroyed so they cannot overlap audio.
+  let pruningV74 = false;
+  function enforceSingleDisplayVideoV74() {
+    if (pruningV74) return;
+    pruningV74 = true;
+    try {
+      if (!isDisplayV74()) {
+        document.querySelectorAll('#preview-viewport video,#live-viewport video,#operator-view video,#operator-live-video').forEach(video => {
+          try { video.muted = true; video.volume = 0; } catch (_) {}
+        });
+        return;
+      }
+
+      const root = document.getElementById('audience-view');
+      if (!root) return;
+      const videos = Array.from(root.querySelectorAll('video'));
+      if (!videos.length) return;
+
+      // Prefer the newest audience-live-video; otherwise the newest video in the output.
+      const named = videos.filter(v => v.id === 'audience-live-video');
+      const master = (named.length ? named[named.length - 1] : videos[videos.length - 1]);
+
+      videos.forEach(video => {
+        if (video === master) {
+          try { video.muted = false; video.volume = 1; } catch (_) {}
+        } else {
+          stopVideoV74(video, true);
+        }
+      });
+    } finally {
+      pruningV74 = false;
+    }
+  }
+
+  const displayObserverV74 = new MutationObserver(() => {
+    requestAnimationFrame(enforceSingleDisplayVideoV74);
+  });
+  const startDisplayGuardV74 = () => {
+    displayObserverV74.observe(document.documentElement, { childList: true, subtree: true });
+    enforceSingleDisplayVideoV74();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', startDisplayGuardV74, { once: true });
+  else startDisplayGuardV74();
+
+  // A scene click should be enough to prepare its video in Preview. If the selected
+  // scene contains a video, stage the first video automatically; no Media Asset click needed.
+  let sceneVideoSerialV74 = 0;
+  document.addEventListener('click', event => {
+    const row = event.target?.closest?.('#scene-list .scene-item');
+    if (!row) return;
+    const serial = ++sceneVideoSerialV74;
+    setTimeout(async () => {
+      if (serial !== sceneVideoSerialV74) return;
+      let scene = null;
+      try { scene = typeof getActiveScene === 'function' ? getActiveScene() : null; } catch (_) {}
+      if (!scene || !Array.isArray(scene.items)) return;
+      const videoIndex = scene.items.findIndex(item => item?.type === 'video');
+      if (videoIndex < 0) {
+        // Non-video scene: guarantee stale video controls/media disappear from Preview.
+        const preview = document.getElementById('preview-viewport');
+        preview?.querySelectorAll('video').forEach(video => stopVideoV74(video, true));
+        preview?.querySelectorAll('.video-toolbar').forEach(toolbar => toolbar.remove());
+        return;
+      }
+
+      try {
+        if (typeof window.setStagedFromSceneIndex === 'function') window.setStagedFromSceneIndex(videoIndex);
+        else if (typeof setStagedFromSceneIndex === 'function') setStagedFromSceneIndex(videoIndex);
+        if (staged) {
+          staged.sceneId = scene.id;
+          staged.sceneItemIndex = videoIndex;
+          staged.videoPlaying = false;
+          staged.videoTime = Number(staged.videoTime || 0);
+        }
+        if (typeof window.renderPreview === 'function') await window.renderPreview();
+      } catch (error) {
+        console.warn('V74 scene video preview failed:', error);
+      }
+    }, 40);
+  }, true);
+
+  // Defensive cleanup: whenever Preview finishes rendering a non-video scene/item,
+  // remove any stale video player and toolbar that an older patch may have left behind.
+  const previousRenderPreviewV74 = window.renderPreview;
+  if (typeof previousRenderPreviewV74 === 'function') {
+    window.renderPreview = async function(...args) {
+      const result = await previousRenderPreviewV74.apply(this, args);
+      let current = null;
+      try { current = window.staged || staged; } catch (_) { current = window.staged; }
+      if (!current || current.type !== 'video') {
+        const preview = document.getElementById('preview-viewport');
+        preview?.querySelectorAll('video').forEach(video => stopVideoV74(video, true));
+        preview?.querySelectorAll('.video-toolbar').forEach(toolbar => toolbar.remove());
+      } else {
+        // Preview is always silent; Display Screen remains the only audio endpoint.
+        document.querySelectorAll('#preview-viewport video').forEach(video => {
+          try { video.muted = true; video.volume = 0; } catch (_) {}
+        });
+      }
+      return result;
+    };
+  }
 })();
