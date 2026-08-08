@@ -12917,3 +12917,113 @@ downloadCloudFileToRoot = async function(fileId) {
     }
   }, true);
 })();
+
+/* V68: reliable Preview -> Live handoff + authoritative PDF operator navigation.
+   - Always synchronizes lexical staged into window.staged before the existing Go Live chain.
+   - Replaces legacy PDF page setter so Preview arrows/keyboard only queue a page; Enter sends it Live.
+   - Keeps the current PDF frame visible while the next page renders through the existing buffered renderer. */
+(() => {
+  if (window.__v68ReliableHandoffInstalled) return;
+  window.__v68ReliableHandoffInstalled = true;
+
+  const cloneV68 = value => {
+    try { return typeof clonePresenterPayload === 'function' ? clonePresenterPayload(value) : structuredClone(value); }
+    catch (_) { try { return JSON.parse(JSON.stringify(value || {})); } catch (_) { return value; } }
+  };
+
+  function stagedV68() {
+    try { return staged || null; } catch (_) { return window.staged || null; }
+  }
+
+  function syncWindowStagedV68() {
+    const current = stagedV68();
+    if (!current) return null;
+    try { window.staged = cloneV68(current); } catch (_) { window.staged = current; }
+    return current;
+  }
+
+  function pdfTotalV68(payload) {
+    let total = Number(payload?.totalPages || payload?.pdfPageCount || 0);
+    try { if (!total && pdfDoc?.numPages) total = Number(pdfDoc.numPages); } catch (_) {}
+    return Number.isFinite(total) && total > 0 ? total : 0;
+  }
+
+  async function setQueuedPdfPageV68(page) {
+    const current = stagedV68();
+    if (!current || current.type !== 'pdf') return;
+
+    const total = pdfTotalV68(current);
+    let next = Math.max(1, Number(page || 1));
+    if (total) next = Math.min(total, next);
+    if (next === Number(current.page || 1)) return;
+
+    current.page = next;
+    try { window.staged = cloneV68(current); } catch (_) { window.staged = current; }
+
+    // Persist only the queued Preview page. Do not change Live until Enter / Go Live.
+    try {
+      const scene = typeof getActiveScene === 'function' ? getActiveScene() : null;
+      if (scene?.items && Number.isInteger(current.sceneItemIndex) && scene.items[current.sceneItemIndex]) {
+        scene.items[current.sceneItemIndex].page = next;
+        if (typeof persistScenes === 'function') persistScenes();
+      }
+    } catch (_) {}
+
+    try { if (typeof setSlideStatus === 'function') setSlideStatus(); } catch (_) {}
+    try { if (typeof updateSlidePreviewActiveState === 'function') updateSlidePreviewActiveState(); } catch (_) {}
+    try { if (typeof updateEmbeddedSlideActiveState === 'function') updateEmbeddedSlideActiveState(); } catch (_) {}
+
+    // Use the newest wrapped renderer. It buffers the next page and swaps only after paint.
+    try {
+      if (typeof window.renderPreview === 'function') await window.renderPreview();
+      else if (typeof renderPreview === 'function') await renderPreview();
+    } catch (error) {
+      console.warn('V68: Unable to render queued PDF page:', error);
+    }
+  }
+
+  // Make every legacy PDF arrow/key path resolve to one authoritative setter.
+  try { setPdfPage = setQueuedPdfPageV68; } catch (_) {}
+  window.setPdfPage = setQueuedPdfPageV68;
+
+  // Capture Preview PDF arrow buttons from all generations of the UI.
+  document.addEventListener('click', event => {
+    const current = stagedV68();
+    if (!current || current.type !== 'pdf') return;
+    const button = event.target?.closest?.('#preview-viewport button');
+    if (!button) return;
+
+    const aria = String(button.getAttribute('aria-label') || '').toLowerCase();
+    const title = String(button.getAttribute('title') || '').toLowerCase();
+    const cls = String(button.className || '').toLowerCase();
+    const text = String(button.textContent || '').trim();
+
+    const isPrev = aria.includes('previous') || title.includes('previous') || cls.includes('prev') || text === '‹' || text === '←';
+    const isNext = aria.includes('next') || title.includes('next') || cls.includes('next') || text === '›' || text === '→';
+    if (!isPrev && !isNext) return;
+
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    setQueuedPdfPageV68((Number(current.page) || 1) + (isPrev ? -1 : 1));
+  }, true);
+
+  // Existing V67 keyboard listener calls setPdfPage; replacing the binding above
+  // makes Left/Right/Up/Down reliable. Its Enter path still calls window.fireLive.
+
+  const previousFireLiveV68 = window.fireLive;
+  let fireLiveBusyV68 = false;
+  window.fireLive = async function(...args) {
+    if (fireLiveBusyV68) return;
+    fireLiveBusyV68 = true;
+    try {
+      // V61 reads window.staged first. Keep it synchronized with the actual Preview
+      // so switching away from a video cannot accidentally recommit the old video.
+      syncWindowStagedV68();
+      return typeof previousFireLiveV68 === 'function'
+        ? await previousFireLiveV68.apply(this, args)
+        : undefined;
+    } finally {
+      fireLiveBusyV68 = false;
+    }
+  };
+})();
