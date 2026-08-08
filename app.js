@@ -6924,7 +6924,7 @@ downloadCloudFileToRoot = async function(fileId) {
     if(mime==='application/pdf'||name.endsWith('.pdf'))return'pdf';
     if(mime.startsWith('image/'))return'image';
     if(mime.startsWith('video/'))return'video';
-    if(mime.startsWith('audio/'))return'video';
+    if(mime.startsWith('audio/'))return'audio';
     return'url';
   }
 
@@ -6957,12 +6957,27 @@ downloadCloudFileToRoot = async function(fileId) {
   window.renderRootFilesList = async function(force=false) {
     const list=document.getElementById('root-files-list'); if(!list)return;
     if(!folderHandle){list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted)">Choose the root folder first.</div>';return}
-    list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted)">Reading root folder...</div>';
+    list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted)">Reading and organizing root folder...</div>';
     if(force || !rootFilesCache.length) rootFilesCache=await collectRootFiles(folderHandle);
-    const pdfOnly=Boolean(document.getElementById('root-pdf-only-filter')?.checked);
-    const files=rootFilesCache.filter(r=>!pdfOnly||rootFileType(r.file)==='pdf');
-    if(!files.length){list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted)">No matching files found.</div>';return}
-    list.innerHTML=files.map((r,i)=>`<div class="drive-pdf-card" data-root-index="${i}"><button class="root-file-delete" title="Delete from root folder" onclick="deleteRootFile(${i})">🗑</button><div class="drive-file-thumb">${rootThumb(r)}</div><div class="drive-file-kind">${escapeHtml(rootFileType(r.file))}</div><div class="drive-pdf-card-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</div><div class="root-file-path">${escapeHtml(r.path)}</div><div class="drive-pdf-card-meta">${escapeHtml(formatFileBytes(r.file.size||0))}</div><div class="drive-pdf-card-actions"><button onclick="addRootFileToScene(${i})">＋ Add to Scene</button></div></div>`).join('');
+    const selectedType=String(document.getElementById('root-file-type-filter')?.value||'all');
+    const indexed=rootFilesCache.map((record,index)=>({record,index,type:rootFileType(record.file)}));
+    const visible=indexed.filter(entry=>selectedType==='all'||entry.type===selectedType);
+    if(!visible.length){list.innerHTML='<div style="grid-column:1/-1;padding:24px;text-align:center;color:var(--text-muted)">No matching files found.</div>';return}
+
+    const order=['image','video','pdf','pptx','audio','url'];
+    const labels={image:'Images',video:'Videos',pdf:'PDF Documents',pptx:'PowerPoint',audio:'Audio',url:'Other Files'};
+    const icons={image:'🖼️',video:'🎬',pdf:'📄',pptx:'📊',audio:'🎵',url:'📦'};
+    const groups=new Map();
+    visible.forEach(entry=>{if(!groups.has(entry.type))groups.set(entry.type,[]);groups.get(entry.type).push(entry)});
+    const sections=[];
+    order.forEach(type=>{
+      const entries=groups.get(type)||[];
+      if(!entries.length)return;
+      entries.sort((a,b)=>String(a.record.name||'').localeCompare(String(b.record.name||''),undefined,{numeric:true,sensitivity:'base'}));
+      sections.push(`<div class="root-file-category"><strong>${icons[type]||'📦'} ${labels[type]||type}</strong><span>${entries.length} file${entries.length===1?'':'s'}</span></div>`);
+      sections.push(entries.map(({record:r,index:i})=>`<div class="drive-pdf-card" data-root-index="${i}"><button class="root-file-delete" title="Delete from root folder" onclick="deleteRootFile(${i})">🗑</button><div class="drive-file-thumb">${rootThumb(r)}</div><div class="drive-file-kind">${escapeHtml(rootFileType(r.file))}</div><div class="drive-pdf-card-name" title="${escapeHtml(r.name)}">${escapeHtml(r.name)}</div><div class="root-file-path">${escapeHtml(r.path)}</div><div class="drive-pdf-card-meta">${escapeHtml(formatFileBytes(r.file.size||0))}</div><div class="drive-pdf-card-actions"><button onclick="addRootFileToScene(${i})">＋ Add to Scene</button></div></div>`).join(''));
+    });
+    list.innerHTML=sections.join('');
   };
 
   function showPptxChoiceModal(title, message, choices) {
@@ -12098,8 +12113,12 @@ downloadCloudFileToRoot = async function(fileId) {
   }
 
   function postV62(message) {
-    try { channel.postMessage(message); } catch (_) {}
-    try { if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*'); } catch (_) {}
+    // The Display Screen already shares the BroadcastChannel. Sending the same
+    // video through both BroadcastChannel and postMessage caused two near-simultaneous
+    // mounts and could briefly produce overlapping audio. Use one transport only.
+    try { channel.postMessage(message); } catch (_) {
+      try { if (displayWindow && !displayWindow.closed) displayWindow.postMessage(message, '*'); } catch (_) {}
+    }
   }
 
   function mountLocalVideoV62(blob, payload) {
@@ -12495,4 +12514,184 @@ downloadCloudFileToRoot = async function(fileId) {
   window.addEventListener('storage', event => {
     if (event.key === LS_BG_TARGET) publishOnlyOfficeExtenderState();
   });
+})();
+
+
+/* V66 MAIN WEBSITE QUALITY PASS
+   - smooth file loading feedback
+   - PDF preview flicker shield
+   - one program-audio authority for live video
+   - root-file organization helpers */
+(() => {
+  let loaderDepthV66 = 0;
+  let loaderShownAtV66 = 0;
+  let loaderHideTimerV66 = null;
+
+  function showMainFileLoadingV66(title = 'Loading file…', detail = 'Preparing preview') {
+    const overlay = document.getElementById('main-file-loading-overlay');
+    const titleEl = document.getElementById('main-file-loading-title');
+    const detailEl = document.getElementById('main-file-loading-detail');
+    if (!overlay) return;
+    loaderDepthV66 += 1;
+    loaderShownAtV66 = loaderShownAtV66 || Date.now();
+    if (loaderHideTimerV66) { clearTimeout(loaderHideTimerV66); loaderHideTimerV66 = null; }
+    if (titleEl) titleEl.textContent = title;
+    if (detailEl) detailEl.textContent = detail;
+    overlay.classList.add('show');
+    overlay.setAttribute('aria-hidden', 'false');
+  }
+
+  function hideMainFileLoadingV66(force = false) {
+    const overlay = document.getElementById('main-file-loading-overlay');
+    if (!overlay) return;
+    if (force) loaderDepthV66 = 0; else loaderDepthV66 = Math.max(0, loaderDepthV66 - 1);
+    if (loaderDepthV66 > 0) return;
+    const wait = Math.max(0, 360 - (Date.now() - (loaderShownAtV66 || Date.now())));
+    loaderHideTimerV66 = setTimeout(() => {
+      overlay.classList.remove('show');
+      overlay.setAttribute('aria-hidden', 'true');
+      loaderShownAtV66 = 0;
+      loaderHideTimerV66 = null;
+    }, wait);
+  }
+
+  window.showMainFileLoading = showMainFileLoadingV66;
+  window.hideMainFileLoading = hideMainFileLoadingV66;
+
+  function fileLabelV66(files) {
+    const list = Array.from(files || []);
+    if (!list.length) return 'Preparing selected file';
+    if (list.length === 1) return list[0].name || 'Preparing selected file';
+    return `${list.length} files selected`;
+  }
+
+  // Main Media Assets uploader: keep feedback visible for the real async work.
+  const unifiedBeforeV66 = window.handleUnifiedMediaUpload;
+  if (typeof unifiedBeforeV66 === 'function') {
+    window.handleUnifiedMediaUpload = async function(event) {
+      const files = event?.target?.files || [];
+      showMainFileLoadingV66('Loading media…', fileLabelV66(files));
+      try {
+        return await unifiedBeforeV66.apply(this, arguments);
+      } finally {
+        hideMainFileLoadingV66();
+      }
+    };
+  }
+
+  // Root Files -> Add to Scene also gets the same consistent loading treatment.
+  const addRootBeforeV66 = window.addRootFileToScene;
+  if (typeof addRootBeforeV66 === 'function') {
+    window.addRootFileToScene = async function(index) {
+      showMainFileLoadingV66('Loading root file…', 'Preparing the selected media');
+      try { return await addRootBeforeV66.apply(this, arguments); }
+      finally { hideMainFileLoadingV66(); }
+    };
+  }
+
+  // Fallback for other file pickers (Bible/background/etc.) that have their own handlers.
+  document.addEventListener('change', event => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || input.type !== 'file' || !input.files?.length) return;
+    if (input.id === 'file-uploader') return; // handled by the async wrapper above
+    showMainFileLoadingV66('Loading file…', fileLabelV66(input.files));
+    setTimeout(() => hideMainFileLoadingV66(), 650);
+  }, true);
+
+  function makePreviewShieldV66() {
+    const preview = document.getElementById('preview-viewport');
+    if (!preview) return null;
+    const rect = preview.getBoundingClientRect();
+    if (rect.width < 20 || rect.height < 20) return null;
+    const shield = document.createElement('div');
+    shield.className = 'preview-flicker-shield';
+    shield.style.left = `${rect.left}px`;
+    shield.style.top = `${rect.top}px`;
+    shield.style.width = `${rect.width}px`;
+    shield.style.height = `${rect.height}px`;
+
+    let src = '';
+    const canvas = [...preview.querySelectorAll('canvas')].reverse().find(c => c.width > 10 && c.height > 10);
+    if (canvas) { try { src = canvas.toDataURL('image/jpeg', .92); } catch (_) {} }
+    if (!src) {
+      const image = [...preview.querySelectorAll('img')].reverse().find(img => img.complete && img.naturalWidth > 10);
+      if (image) src = String(image.currentSrc || image.src || '');
+    }
+    if (src) {
+      const img = document.createElement('img');
+      img.src = src;
+      shield.appendChild(img);
+    } else {
+      const spinner = document.createElement('div');
+      spinner.className = 'main-file-loading-spinner';
+      shield.appendChild(spinner);
+    }
+    document.body.appendChild(shield);
+    return shield;
+  }
+
+  function releasePreviewShieldV66(shield) {
+    if (!shield) return;
+    requestAnimationFrame(() => {
+      shield.classList.add('fade-out');
+      setTimeout(() => shield.remove(), 200);
+    });
+  }
+
+  // Buffer PDF preview swaps so the previous frame stays visible until the new page is ready.
+  const renderPreviewBeforeV66 = window.renderPreview;
+  if (typeof renderPreviewBeforeV66 === 'function') {
+    window.renderPreview = async function() {
+      const payload = window.staged || (typeof staged !== 'undefined' ? staged : null);
+      const smoothPdf = payload?.type === 'pdf';
+      const shield = smoothPdf ? makePreviewShieldV66() : null;
+      if (smoothPdf) showMainFileLoadingV66('Loading PDF…', payload?.name || `Page ${payload?.page || 1}`);
+      try {
+        const result = await renderPreviewBeforeV66.apply(this, arguments);
+        // Let the newly rendered canvas/image paint once before releasing the previous frame.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        return result;
+      } finally {
+        releasePreviewShieldV66(shield);
+        if (smoothPdf) hideMainFileLoadingV66();
+      }
+    };
+  }
+
+  // Enforce one program-audio source after Go Live. Preview never competes with Live.
+  function enforceSingleVideoAudioV66() {
+    const preview = document.querySelector('#preview-viewport video');
+    const operator = document.getElementById('operator-live-video');
+    const audience = document.getElementById('audience-live-video');
+    const audienceOpen = Boolean(typeof displayWindow !== 'undefined' && displayWindow && !displayWindow.closed);
+    if (preview) { preview.muted = true; preview.volume = 0; }
+    if (operator) {
+      operator.muted = audienceOpen;
+      operator.volume = audienceOpen ? 0 : 1;
+    }
+    if (audience) { audience.muted = false; audience.volume = 1; }
+  }
+
+  const fireLiveBeforeV66 = window.fireLive;
+  if (typeof fireLiveBeforeV66 === 'function') {
+    window.fireLive = async function() {
+      const payload = window.staged || (typeof staged !== 'undefined' ? staged : null);
+      const result = await fireLiveBeforeV66.apply(this, arguments);
+      if (payload?.type === 'video') {
+        enforceSingleVideoAudioV66();
+        setTimeout(enforceSingleVideoAudioV66, 80);
+        setTimeout(enforceSingleVideoAudioV66, 400);
+      }
+      return result;
+    };
+  }
+
+  // Any newly mounted video is normalized immediately.
+  const videoObserverV66 = new MutationObserver(() => enforceSingleVideoAudioV66());
+  document.addEventListener('DOMContentLoaded', () => {
+    const operator = document.getElementById('operator-view');
+    const audience = document.getElementById('audience-view');
+    if (operator) videoObserverV66.observe(operator, {childList:true,subtree:true});
+    if (audience) videoObserverV66.observe(audience, {childList:true,subtree:true});
+  }, {once:true});
 })();
