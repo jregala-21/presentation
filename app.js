@@ -14122,7 +14122,13 @@ downloadCloudFileToRoot = async function(fileId) {
     });
   });
   const installMediaGuardV75 = () => {
-    mediaObserverV75.observe(document.documentElement, { childList: true, subtree: true });
+    // Observe only media-bearing viewports instead of the entire document.
+    // This preserves the same mute/master behavior while avoiding a large mutation
+    // workload when scene lists, timers, labels, and controls repaint on slower PCs.
+    const roots = isDisplayV75()
+      ? [document.getElementById('audience-view')]
+      : [document.getElementById('preview-viewport'), document.getElementById('live-viewport')];
+    roots.filter(Boolean).forEach(root => mediaObserverV75.observe(root, { childList: true, subtree: true }));
     if (isDisplayV75()) enforceDisplayMasterV75();
     else silenceOperatorV75();
   };
@@ -14134,7 +14140,9 @@ downloadCloudFileToRoot = async function(fileId) {
   // supports captureStream(). Display Screen still receives its own independent video.
   let mirroredOperatorV75 = null;
   function mirrorPreviewIntoOperatorV75() {
-    if (isDisplayV75()) return;
+    // Windows/low-power Chromium is more stable using the existing muted video fallback.
+    // captureStream can cause controller repaint/flicker and extra compositor pressure there.
+    if (isDisplayV75() || /Windows/i.test(navigator.userAgent || '')) return;
     const queued = payloadV75();
     if (!queued || queued.type !== 'video') return;
     const preview = document.querySelector('#preview-viewport video');
@@ -14223,4 +14231,120 @@ downloadCloudFileToRoot = async function(fileId) {
       }
     }, 25);
   }, false);
+})();
+
+
+/* V76: Low-spec Windows rendering pass.
+   Performance/presentation-only changes: no scene, PDF, Go Live, keyboard,
+   transition, hard-reset, or media-selection logic is changed. */
+(() => {
+  if (window.__v76LowSpecRenderingInstalled) return;
+  window.__v76LowSpecRenderingInstalled = true;
+
+  const ua = navigator.userAgent || '';
+  const windows = /Windows/i.test(ua);
+  const lowCPU = Number(navigator.hardwareConcurrency || 8) <= 4;
+  const lowRAM = Number(navigator.deviceMemory || 8) <= 4;
+  const saveData = Boolean(navigator.connection && navigator.connection.saveData);
+  const lightweight = windows || lowCPU || lowRAM || saveData;
+  if (!lightweight) return;
+
+  document.documentElement.classList.add('low-spec-ui');
+
+  const css = document.createElement('style');
+  css.id = 'low-spec-ui-style-v76';
+  css.textContent = `
+    /* Keep all controls/functions, but remove expensive decorative compositing. */
+    .low-spec-ui *, .low-spec-ui *::before, .low-spec-ui *::after {
+      scroll-behavior: auto !important;
+    }
+    .low-spec-ui .main-file-loading-overlay,
+    .low-spec-ui .modal-overlay,
+    .low-spec-ui [class*="glass"],
+    .low-spec-ui [class*="blur"] {
+      -webkit-backdrop-filter: none !important;
+      backdrop-filter: none !important;
+    }
+    .low-spec-ui .panel,
+    .low-spec-ui .card,
+    .low-spec-ui .scene-item,
+    .low-spec-ui .media-item,
+    .low-spec-ui .slide-card,
+    .low-spec-ui .presentation-slide,
+    .low-spec-ui .root-file-card {
+      box-shadow: none !important;
+    }
+    .low-spec-ui #preview-viewport,
+    .low-spec-ui #live-viewport,
+    .low-spec-ui #audience-view {
+      contain: layout paint style;
+      isolation: isolate;
+    }
+    .low-spec-ui #preview-viewport video,
+    .low-spec-ui #live-viewport video,
+    .low-spec-ui #audience-view video {
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      transform: translateZ(0);
+    }
+    /* Keep the video controller visually stable during DOM/scene repaint. */
+    .low-spec-ui #preview-viewport .video-toolbar,
+    .low-spec-ui #preview-viewport [class*="video-control"],
+    .low-spec-ui #preview-viewport [class*="video-toolbar"] {
+      animation: none !important;
+      transition: none !important;
+      opacity: 1 !important;
+      visibility: visible !important;
+      transform: none !important;
+      will-change: auto !important;
+    }
+    /* Non-program UI animation is unnecessary on a low-spec operator machine. */
+    .low-spec-ui .main-file-loading-spinner { animation-duration: 1.15s !important; }
+    .low-spec-ui .scene-item,
+    .low-spec-ui button,
+    .low-spec-ui select,
+    .low-spec-ui input,
+    .low-spec-ui .media-item,
+    .low-spec-ui .slide-card,
+    .low-spec-ui .presentation-slide {
+      transition-duration: 0.01ms !important;
+    }
+  `;
+  document.head.appendChild(css);
+
+  function tuneVideoElementsV76(root = document) {
+    root.querySelectorAll?.('video').forEach(video => {
+      try { video.playsInline = true; } catch (_) {}
+      try { video.disablePictureInPicture = true; } catch (_) {}
+      try { video.preload = 'auto'; } catch (_) {}
+      try { video.style.willChange = 'auto'; } catch (_) {}
+    });
+  }
+
+  const installV76 = () => {
+    tuneVideoElementsV76();
+    // Only media viewports are watched. This does not re-render or alter media state.
+    const roots = [
+      document.getElementById('preview-viewport'),
+      document.getElementById('live-viewport'),
+      document.getElementById('audience-view')
+    ].filter(Boolean);
+    if (!roots.length) return;
+    let scheduled = false;
+    const observer = new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => {
+        scheduled = false;
+        roots.forEach(tuneVideoElementsV76);
+      });
+    });
+    roots.forEach(root => observer.observe(root, { childList: true, subtree: true }));
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', installV76, { once: true });
+  } else {
+    installV76();
+  }
 })();
