@@ -13215,3 +13215,157 @@ downloadCloudFileToRoot = async function(fileId) {
   try { channel.addEventListener('message', event => receiveCommitV69(event.data)); } catch (_) {}
   window.addEventListener('message', event => receiveCommitV69(event.data));
 })();
+
+/* V70: PDF operator ergonomics + single program audio guard.
+   This patch intentionally does NOT replace or wrap V69 Go Live, so the hard reset
+   and transition pipeline remain unchanged. */
+(() => {
+  if (window.__v70PdfAudioUxInstalled) return;
+  window.__v70PdfAudioUxInstalled = true;
+
+  const isPdfQueuedV70 = () => {
+    try { return Boolean(staged && staged.type === 'pdf'); }
+    catch (_) { return Boolean(window.staged && window.staged.type === 'pdf'); }
+  };
+
+  const queuedPdfV70 = () => {
+    try { return staged || window.staged || null; }
+    catch (_) { return window.staged || null; }
+  };
+
+  function isTextEntryV70(target) {
+    if (!target) return false;
+    if (target.isContentEditable) return true;
+    const tag = String(target.tagName || '').toUpperCase();
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
+  }
+
+  // Remove every legacy previous/next arrow that may be injected over PDF Preview.
+  // Slide selection is handled through the slide browser and keyboard instead.
+  function removePreviewPdfArrowsV70() {
+    const preview = document.getElementById('preview-viewport');
+    if (!preview) return;
+    preview.querySelectorAll('button').forEach(button => {
+      const aria = String(button.getAttribute('aria-label') || '').toLowerCase();
+      const title = String(button.getAttribute('title') || '').toLowerCase();
+      const cls = String(button.className || '').toLowerCase();
+      const text = String(button.textContent || '').trim();
+      const arrow = aria.includes('previous') || aria.includes('next') ||
+        title.includes('previous') || title.includes('next') ||
+        cls.includes('prev') || cls.includes('next') ||
+        text === '‹' || text === '›' || text === '←' || text === '→';
+      if (arrow) button.remove();
+    });
+    preview.querySelectorAll('.v17-pdf-nav,.v19-pdf-nav,.v23-live-pdf-nav,.pdf-live-nav,.pdf-toolbar').forEach(node => node.remove());
+  }
+
+  const previewV70 = document.getElementById('preview-viewport');
+  if (previewV70) {
+    const previewObserverV70 = new MutationObserver(() => removePreviewPdfArrowsV70());
+    previewObserverV70.observe(previewV70, { childList: true, subtree: true });
+    removePreviewPdfArrowsV70();
+  }
+
+  // Arrow keys navigate the queued PDF globally, even when a slide/card/button has focus.
+  // Enter still uses the existing V69 hard-reset Go Live path.
+  window.addEventListener('keydown', event => {
+    if (!isPdfQueuedV70() || isTextEntryV70(event.target)) return;
+    const key = event.key;
+    if (!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Enter'].includes(key)) return;
+
+    const current = queuedPdfV70();
+    if (!current) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (key === 'Enter') {
+      if (typeof window.fireLive === 'function') window.fireLive();
+      return;
+    }
+
+    const delta = (key === 'ArrowLeft' || key === 'ArrowUp') ? -1 : 1;
+    const setter = typeof window.setPdfPage === 'function'
+      ? window.setPdfPage
+      : (typeof setPdfPage === 'function' ? setPdfPage : null);
+    if (setter) setter((Number(current.page) || 1) + delta);
+  }, true);
+
+  // Double-click any presentation-slide card to queue it and immediately present it.
+  // A normal single click remains Preview-only.
+  document.addEventListener('dblclick', async event => {
+    const card = event.target?.closest?.('#slide-preview-grid .preview-slide-card');
+    if (!card) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (card.dataset.pdfPage) {
+      const page = Number(card.dataset.pdfPage) || 1;
+      const setter = typeof window.setPdfPage === 'function'
+        ? window.setPdfPage
+        : (typeof setPdfPage === 'function' ? setPdfPage : null);
+      if (setter) await setter(page);
+    } else if (card.dataset.sceneIndex) {
+      const index = Number(card.dataset.sceneIndex);
+      if (Number.isInteger(index) && typeof setStagedFromSceneIndex === 'function') {
+        setStagedFromSceneIndex(index);
+        try { if (typeof updateSlidePreviewActiveState === 'function') updateSlidePreviewActiveState(); } catch (_) {}
+        // Let Preview state/DOM settle before committing it through V69.
+        await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      }
+    }
+
+    if (typeof window.fireLive === 'function') await window.fireLive();
+  }, true);
+
+  // Keep exactly one audible video: the newest audience-program video in the display
+  // window. Preview/operator copies are always muted. This prevents duplicate receivers
+  // from producing overlapping audio without touching V69 transitions or resets.
+  function enforceSingleProgramAudioV70() {
+    const isDisplay = document.body.classList.contains('live-window-mode');
+    const allVideos = Array.from(document.querySelectorAll('video'));
+
+    if (!isDisplay) {
+      allVideos.forEach(video => {
+        try { video.muted = true; video.volume = 0; } catch (_) {}
+      });
+      return;
+    }
+
+    const audienceRoot = document.getElementById('audience-view');
+    const audienceVideos = audienceRoot ? Array.from(audienceRoot.querySelectorAll('video')) : [];
+    const viable = audienceVideos.filter(video => {
+      if (!video.isConnected) return false;
+      const style = getComputedStyle(video);
+      if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity || 1) <= 0.01) return false;
+      const rect = video.getBoundingClientRect();
+      return rect.width > 8 && rect.height > 8;
+    });
+    const audible = viable.length ? viable[viable.length - 1] : null;
+
+    allVideos.forEach(video => {
+      try {
+        const shouldBeAudible = video === audible;
+        video.muted = !shouldBeAudible;
+        video.volume = shouldBeAudible ? 1 : 0;
+      } catch (_) {}
+    });
+  }
+
+  let audioGuardQueuedV70 = false;
+  function queueAudioGuardV70() {
+    if (audioGuardQueuedV70) return;
+    audioGuardQueuedV70 = true;
+    requestAnimationFrame(() => {
+      audioGuardQueuedV70 = false;
+      enforceSingleProgramAudioV70();
+    });
+  }
+
+  const audioObserverV70 = new MutationObserver(queueAudioGuardV70);
+  audioObserverV70.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['style','class'] });
+  document.addEventListener('play', queueAudioGuardV70, true);
+  document.addEventListener('loadeddata', queueAudioGuardV70, true);
+  try { channel.addEventListener('message', queueAudioGuardV70); } catch (_) {}
+  window.addEventListener('message', queueAudioGuardV70);
+  queueAudioGuardV70();
+})();
