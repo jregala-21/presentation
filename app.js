@@ -12393,7 +12393,21 @@ downloadCloudFileToRoot = async function(fileId) {
   const EXTENDER_STATE = 'JIL_ONLYOFFICE_EXTENDER_STATE';
   const EXTENDER_OPEN_DISPLAY = 'JIL_ONLYOFFICE_EXTENDER_OPEN_DISPLAY';
   const EXTENDER_DISPLAY_STATE = 'JIL_ONLYOFFICE_EXTENDER_DISPLAY_STATE';
+  const EXTENDER_TAKEOVER = 'JIL_ONLYOFFICE_EXTENDER_TAKEOVER';
   let onlyOfficeExtenderWindow = null;
+
+  function stopMainWebsiteDisplayForOnlyOffice() {
+    // ONLYOFFICE owns the audience monitor while its Extender is active.
+    // Close only the main website Display Screen; leave Preview/Live state intact
+    // so returning from PowerPoint does not disturb the operator workspace.
+    try {
+      if (displayWindow && !displayWindow.closed) closeDisplayScreen();
+      else updateDisplayToggleButton();
+    } catch (_) {}
+    return true;
+  }
+
+  window.stopMainWebsiteDisplayForOnlyOffice = stopMainWebsiteDisplayForOnlyOffice;
 
   function resolveOnlyOfficeExtenderBackgroundSource() {
     const filename = localStorage.getItem(LS_BG_TARGET) || '';
@@ -12530,6 +12544,9 @@ downloadCloudFileToRoot = async function(fileId) {
   window.prepareOnlyOfficeExtenderWindows = function() {
     // PPTX-only hook: reserve/open only the Extender controller.
     // The audience Display Screen is opened manually from the Extender.
+    // If the normal website Display Screen is currently presenting, release
+    // that monitor first so PPTX has exclusive ownership when the Extender starts.
+    stopMainWebsiteDisplayForOnlyOffice();
     selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
     if (!selectedMonitor) {
       showModal('Select Audience Monitor', 'Use Detect Monitor and select the secondary display before opening ONLYOFFICE.', false);
@@ -12545,6 +12562,8 @@ downloadCloudFileToRoot = async function(fileId) {
 
   window.activateOnlyOfficeExtenderSession = async function() {
     // This function is called only by the PPTX/ONLYOFFICE workflow.
+    // A PPTX Extender session takes exclusive control of the audience monitor.
+    stopMainWebsiteDisplayForOnlyOffice();
     selectedMonitor = selectedMonitor || getStoredSelectedMonitor();
     if (!onlyOfficeExtenderWindow || onlyOfficeExtenderWindow.closed) {
       const extender = openOnlyOfficeExtenderWindow();
@@ -12598,6 +12617,9 @@ downloadCloudFileToRoot = async function(fileId) {
       await openOnlyOfficeDisplayFromExtender();
     } else if (message.command === EXTENDER_READY) {
       publishOnlyOfficeExtenderState();
+    } else if (message.command === EXTENDER_TAKEOVER) {
+      stopMainWebsiteDisplayForOnlyOffice();
+      publishOnlyOfficeExtenderState();
     }
   });
 
@@ -12609,6 +12631,9 @@ downloadCloudFileToRoot = async function(fileId) {
     } else if (message.command === EXTENDER_OPEN_DISPLAY) {
       await openOnlyOfficeDisplayFromExtender();
     } else if (message.command === EXTENDER_READY) {
+      publishOnlyOfficeExtenderState();
+    } else if (message.command === EXTENDER_TAKEOVER) {
+      stopMainWebsiteDisplayForOnlyOffice();
       publishOnlyOfficeExtenderState();
     }
   });
